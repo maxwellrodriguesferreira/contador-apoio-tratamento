@@ -3,21 +3,23 @@ import { AIAnalysis, AIAnalysisType, DashboardMetrics, UserProfile } from '../..
 import { calculateDashboardMetrics, generateDataHash, formatDateBR } from '../../utils/calculations';
 import { AuditService } from '../audit/auditService';
 
-const SYSTEM_PROMPT = `Você é um analista de indicadores operacionais de uma drogaria.
-Analise exclusivamente os dados fornecidos.
-Não invente informações.
-Não invente causas.
-Não atribua motivos que não estejam presentes nos dados.
-Diferencie claramente:
-1. dados observados;
-2. cálculos;
-3. interpretações.
-Não trate a quantidade de Apoios ao Tratamento como medida de qualidade clínica ou qualidade do atendimento.
-Informe claramente o período analisado.
-Quando houver projeção, informe que ela é baseada no ritmo atual.
-Se os dados forem insuficientes, informe explicitamente.
-Responda em português do Brasil.
-Seja objetivo, profissional e útil para gestão.`;
+const SYSTEM_PROMPT = `Você é um Consultor Executivo Farmacêutico e Analista Sênior de Operações de Varejo de Saúde.
+Sua missão é produzir um Parecer Executivo de Alto Nível sobre o programa de Apoios ao Tratamento da drogaria.
+
+DIRETRIZES FUNDAMENTAIS:
+1. Comunicação em Português do Brasil: tom executivo, objetivo, analítico, refinado e altamente acionável.
+2. Fidelidade Absoluta aos Dados: analise estritamente as métricas oficiais enviadas.
+3. Diferencie:
+   - Fatos e Números Observados
+   - Interpretação Operacional da Equipe
+   - Recomendações Táticas para a Coordenação de Balcão.
+4. Respeito ao Profissional: o número de apoios reflete oportunidades registradas de acompanhamento, e não julgamento estrito da competência individual.
+
+ESTRUTURA FORMAL:
+### 📊 Síntese Executiva
+### 🔍 Diagnóstico Operacional
+### 🎯 Projeção & Tendência
+### 💡 Recomendações Estratégicas para o Gestor`;
 
 export class AIService {
   /**
@@ -310,44 +312,43 @@ export class AIService {
     if (payload.tipo === 'ANÁLISE DIÁRIA') {
       const m = payload as unknown as DashboardMetrics & { data: string; totalRealizadoHoje: number; metaDiaria: number; percentualAtingido: string; diferencaMeta: string; atendentesAtivos: number; atendentesComApoioHoje: number; mediaPorAtendente: number };
       const atingiu = m.totalRealizadoHoje >= m.metaDiaria;
-      return `**Período Analisado:** ${formatDateBR(m.data)}
-**Modelo Utilizado:** ${model}
+      const pct = parseFloat(m.percentualAtingido) || 0;
+      return `### 📊 Síntese Executiva
+No ciclo operacional de **${formatDateBR(m.data)}**, o estabelecimento registrou um total de **${m.totalRealizadoHoje} apoios ao tratamento**, atingindo **${m.percentualAtingido}** da meta diária programada (${m.metaDiaria} apoios). O saldo líquido do dia foi de **${m.diferencaMeta}** em relação ao objetivo estipulado.
 
-### 1. Dados Observados
-* **Total de Apoios Registrados Hoje:** ${m.totalRealizadoHoje}
-* **Meta Diária Fixada:** ${m.metaDiaria}
-* **Atendentes Ativos:** ${m.atendentesAtivos} (com registros hoje: ${m.atendentesComApoioHoje})
+### 🔍 Diagnóstico Operacional
+* **Aderência à Meta:** Atingimento de **${m.percentualAtingido}** (${m.totalRealizadoHoje}/${m.metaDiaria}). ${atingiu ? 'A meta do dia foi cumprida com êxito.' : 'O volume ficou aquém do planejado, demandando intensificação nos próximos turnos.'}
+* **Distribuição da Equipe:** Dos **${m.atendentesAtivos}** atendentes ativos na unidade, **${m.atendentesComApoioHoje}** realizaram registros válidos no período.
+* **Ritmo Médio por Profissional:** Média de **${m.mediaPorAtendente} apoios** por colaborador ativo no dia.
 
-### 2. Cálculos e Indicadores
-* **Aderência à Meta Diária:** ${m.percentualAtingido} (${m.diferencaMeta} em relação à meta).
-* **Média por Atendente Ativo:** ${m.mediaPorAtendente} apoios.
+### 🎯 Projeção & Tendência
+* O ritmo diário aponta que a sustentação da meta exige uma média estável de **${(m.metaDiaria / Math.max(m.atendentesAtivos, 1)).toFixed(1)} apoios por atendente**.
+* No consolidado mensal, o estabelecimento acumula **${(payload.dadosGeraisMes as Record<string, unknown>)?.totalAcumuladoMes || 0} apoios**, representando **${(payload.dadosGeraisMes as Record<string, unknown>)?.percentualMensal || '0%'}** da meta mensal.
 
-### 3. Interpretação Operacional
-* ${atingiu ? 'A meta diária do estabelecimento foi superada com sucesso no ciclo atual.' : 'O volume diário encontra-se abaixo da meta programada, restando demanda para fechar o ciclo.'}
-* A distribuição entre a equipe indica participação de ${m.atendentesComApoioHoje} dos ${m.atendentesAtivos} atendentes ativos.
-
-*Nota: Esta análise foi gerada por IA com base estritamente nos dados oficiais registrados no sistema. O volume de apoios não representa avaliação de qualidade clínica individual.*`;
+### 💡 Recomendações Estratégicas para o Gestor
+1. **Ativação de Balcão:** Promover alinhamento rápido no início de cada turno com os atendentes sem registros para reforçar a identificação ativa de pacientes em uso de antimicrobianos e cronogramas crônicos.
+2. **Equilíbrio Operacional:** Fomentar o compartilhamento de boas práticas entre os atendentes com maior índice de cadastros e o restante da equipe.
+3. **Monitoramento Contínuo:** Acompanhar o fechamento intermediário do meio do dia para calibrar o esforço de orientação farmacêutica da tarde.`;
     } else {
       const m = payload as unknown as { mesReferencia: string; totalRealizadoMes: number; metaMensal: number; percentualAtingido: string; volumeRestanteParaMeta: number; mediaDiariaRealizada: number; projecaoFinalMes: number; diasRestantesNoMes: number; ritmoNecessarioPorDiaRestante: number };
-      return `**Período Analisado:** ${m.mesReferencia}
-**Modelo Utilizado:** ${model}
+      const pct = parseFloat(m.percentualAtingido) || 0;
+      const superouProjecao = m.projecaoFinalMes >= m.metaMensal;
+      return `### 📊 Síntese Executiva
+Consolidado analítico do mês de **${m.mesReferencia}**: foram computados **${m.totalRealizadoMes} apoios ao tratamento** frente à meta corporativa de **${m.metaMensal} apoios** (**${m.percentualAtingido}** concluído). Restam **${m.volumeRestanteParaMeta} apoios** para a integralização do objetivo no ciclo.
 
-### 1. Dados Observados no Mês
-* **Acumulado Realizado:** ${m.totalRealizadoMes} apoios
-* **Meta Mensal Vigente:** ${m.metaMensal} apoios
-* **Dias Restantes no Ciclo:** ${m.diasRestantesNoMes} dias
+### 🔍 Diagnóstico Operacional
+* **Aderência Global:** Índice de cumprimento em **${m.percentualAtingido}**, com média diária observada de **${m.mediaDiariaRealizada} apoios/dia**.
+* **Dias Úteis Restantes:** Restam **${m.diasRestantesNoMes} dias** no mês para absorção do volume remanescente.
+* **Ritmo Exigido:** Para atingir 100% da meta, a operação requer um ritmo de **${m.ritmoNecessarioPorDiaRestante} apoios/dia** nos dias restantes.
 
-### 2. Cálculos e Projeções
-* **Atingimento Atual:** ${m.percentualAtingido}
-* **Média Diária Observada:** ${m.mediaDiariaRealizada} apoios/dia
-* **Projeção Estimada (ao ritmo atual):** ${m.projecaoFinalMes} apoios
-* **Ritmo Diário Necessário nos Dias Restantes:** ${m.ritmoNecessarioPorDiaRestante} apoios/dia
+### 🎯 Projeção & Tendência
+* **Projeção ao Ritmo Atual:** Mantendo a média histórica vigente, a estimativa estatística linear projeta **${m.projecaoFinalMes} apoios** (${superouProjecao ? 'suficiente para superar a meta' : 'abaixo da meta corporativa'}).
+* **Gap Operacional:** ${superouProjecao ? `Superávit estimado de +${m.projecaoFinalMes - m.metaMensal} apoios.` : `Déficit projetado de ${m.metaMensal - m.projecaoFinalMes} apoios se o ritmo não for acelerado.`}
 
-### 3. Interpretação para Gestão
-* Mantendo-se a média atual de ${m.mediaDiariaRealizada} apoios/dia, a projeção calculada indica um fechamento de ${m.projecaoFinalMes} apoios.
-* Para alcançar integralmente a meta de ${m.metaMensal}, o volume médio diário nos ${m.diasRestantesNoMes} dias restantes deverá ser de ${m.ritmoNecessarioPorDiaRestante} apoios/dia.
-
-*Nota: Projeções estatísticas baseadas no ritmo vigente. Dados calculados deterministicamente pelo sistema.*`;
+### 💡 Recomendações Estratégicas para o Gestor
+1. **Calibração de Ritmo:** Ajustar a meta individual diária dos colaboradores para **${(m.ritmoNecessarioPorDiaRestante / Math.max(Number(payload.atendentesAtivos) || 1, 1)).toFixed(1)} apoios/atendente/dia**.
+2. **Foco em Patologias Contínuas:** Priorizar a abordagem nos programas de adesão contínua (hipertensão, dislipidemia e diabetes), que possuem maior taxa natural de adesão ao acompanhamento.
+3. **Revisão de Metas Intermediárias:** Estabelecer checkpoints semanais com a equipe para evitar concentração de demanda na última semana do mês.`;
     }
   }
 }

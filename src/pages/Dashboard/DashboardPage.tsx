@@ -17,6 +17,7 @@ import { AIAnalysis, TreatmentSupport, Attendant, Goal } from '../../types';
 import { StatCard } from '../../components/common/StatCard';
 import { Button } from '../../components/common/Button';
 import { useToast } from '../../contexts/ToastContext';
+import { AIExecutiveReportCard } from '../../components/dashboard/AIExecutiveReportCard';
 import {
   LineChart,
   Line,
