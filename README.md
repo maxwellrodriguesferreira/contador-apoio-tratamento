@@ -1,12 +1,14 @@
 # Apoio ao Tratamento — Gestão, Acompanhamento Clínico & Inteligência Operacional
 
-Sistema web corporativo completo de ponta a ponta projetado para drogarias e redes farmacêuticas para registro, acompanhamento, auditoria, cálculo de metas e análise preditiva por Inteligência Artificial (Google Gemini) de **Apoios ao Tratamento**.
+Sistema web corporativo completo projetado para drogarias e redes farmacêuticas para registro, acompanhamento, auditoria imutável, cálculo determinístico de metas e análise preditiva por Inteligência Artificial (Google Gemini) de **Apoios ao Tratamento**.
+
+Totalmente conteinerizado com **Docker & Docker Compose** e com suporte nativo a banco de dados **Cloudflare D1**.
 
 ---
 
 ## 1. Visão Geral e Conceito
 
-Um **Apoio ao Tratamento** representa a situação em que um cliente/paciente de drogaria é orientado e cadastrado para que um farmacêutico faça contato posterior de acompanhamento terapêutico (ex: antibioticoterapia, hipertensão, diabetes, pediatria).
+Um **Apoio ao Tratamento** representa a situação em que um cliente/paciente de drogaria é orientado e cadastrado para acompanhamento farmacoterapêutico (ex: antibioticoterapia, hipertensão, diabetes, pediatria).
 
 ### Princípio Fundamental de Separação de Papéis:
 ```text
@@ -20,7 +22,7 @@ Apoio ao Tratamento = 10
      ▼
 Atendente (João Silva)
 ```
-* **USUÁRIO DO SISTEMA ≠ ATENDENTE**: O atendente não lança apoios. Quem registra, edita, exclui ou restaura é o perfil **ADMIN**. O **ATENDENTE** possui acesso somente leitura aos seus indicadores e aos dados consolidados no Dashboard.
+* **USUÁRIO DO SISTEMA ≠ ATENDENTE**: O atendente não lança apoios. Quem registra, edita, exclui ou restaura é o perfil **ADMIN**. O **ATENDENTE** possui acesso exclusivamente em modo leitura aos seus indicadores e aos dados consolidados no Dashboard.
 
 ---
 
@@ -28,150 +30,131 @@ Atendente (João Silva)
 
 ```text
                      USUÁRIO (Navegador)
-                            │
-                            ▼
-              ┌───────────────────────────┐
-              │    FRONTEND (React + TS)   │
-              │  Vite • Tailwind • Recharts│
-              └─────────────┬─────────────┘
-                            │
-                            ▼
-              ┌───────────────────────────┐
-              │      AWS AMPLIFY (Gen 2)   │
-              └─────────────┬─────────────┘
-                            │
-            ┌───────────────┼───────────────┐
-            │               │               │
-            ▼               ▼               ▼
-      Amazon Cognito   Amplify Data    Amplify Hosting
-       (Auth & RBAC)   (DynamoDB / API)
-                            │
-                    ┌───────┴───────┐
-                    │               │
-                    ▼               ▼
-              AWS Lambda      Secrets Manager (KMS)
-           (Gemini Handler)   (apoio-tratamento/gemini)
-                    │               │
-                    └───────┬───────┘
-                            │
-                            ▼
-                    Google Gemini API
-                  (gemini-3.6-flash)
+                             │
+                             ▼
+               ┌───────────────────────────┐
+               │    FRONTEND (Porta 3000)  │
+               │  Nginx Alpine • React 18  │
+               │ Vite • Tailwind • Recharts│
+               └─────────────┬─────────────┘
+                             │
+                     (proxy /api/*)
+                             │
+                             ▼
+               ┌───────────────────────────┐
+               │    BACKEND (Porta 4000)   │
+               │   Node.js • Express • TS  │
+               └─────────────┬─────────────┘
+                             │
+             ┌───────────────┴───────────────┐
+             │                               │
+             ▼                               ▼
+    CLOUDFLARE D1 (Edge SQL)          GOOGLE GEMINI API
+ (Dual Engine: Remote / Local)       (gemini-3.6-flash)
 ```
 
 ### Tecnologias:
-* **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Recharts, Lucide Icons, Material Symbols, Zod, XLSX.
-* **Infraestrutura AWS (Amplify Gen 2 / CDK)**:
-  * **Amazon Cognito**: Autenticação, User Pools, grupos `ADMIN` e `ATENDENTE`, expiração de sessão e fluxo de primeiro acesso.
-  * **Amplify Data**: Modelagem GraphQL/DynamoDB com RBAC rigoroso no backend.
-  * **AWS Lambda**: Processamento serverless com IAM Least Privilege.
-  * **AWS Secrets Manager**: Persistência criptografada da Google Gemini API Key.
-* **Inteligência Artificial**: Google Gemini (`gemini-3.6-flash`), com prompt corporativo em PT-BR, cache por hash determinístico e invalidação automática em mutações.
+* **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Recharts, Lucide Icons, Material Symbols, Zod, XLSX, Nginx Alpine.
+* **Backend**: Node.js 24, TypeScript, Express, CORS, Driver Dual Cloudflare D1 / SQLite nativo.
+* **Banco de Dados (Cloudflare D1)**:
+  * Motor relacional SQL com integridade ACID, soft delete, concorrência otimista (`version`) e trilha de auditoria (`old_value` / `new_value`).
+  * Suporte dual transparente: **Cloudflare D1 Edge REST API** (produção) e **SQLite nativo** com volume persistente (execução local / offline).
+* **Inteligência Artificial**: Google Gemini (`gemini-3.6-flash`), com prompt corporativo em PT-BR, chave protegida exclusivamente no backend (`GEMINI_API_KEY`) e cache determinístico no Cloudflare D1 por hash (`input_hash`).
+* **Conteinerização**: Docker Multi-stage Builds e Docker Compose com healthcheck integrado.
 
 ---
 
-## 3. Regras de Negócio e Segurança Mandatórias
+## 3. Variáveis de Ambiente (.env)
 
-1. **Regra Matemática da Edição (Regra 8)**: Editar um apoio de 10 para 15 resulta em **15**, e **NUNCA** em 25. Todos os totais e projeções são calculados deterministicamente a partir dos registros ativos válidos.
-2. **Soft Delete & Restore (Regras 9 e 10)**: Ao excluir, os campos `deletedAt` e `deletedBy` são preenchidos e o registro é subtraído dos indicadores. Ao restaurar por um ADMIN, o total é recuperado e registrado na auditoria.
-3. **Concorrência Otimista (Regra 30)**: Controle de versão (`version`). Se dois administradores editarem simultaneamente, o sistema avisa para atualizar antes de sobrescrever.
-4. **Proteção Estrita de Mutações (403 Forbidden)**: Se um usuário com perfil `ATENDENTE` tentar qualquer mutação (`POST`, `PUT`, `DELETE`, `RESTORE`), recebe `403 Forbidden` no frontend, rotas e backend.
-5. **Segurança de Secrets**: A API Key do Gemini **NUNCA** é exposta no frontend, logs, Git ou respostas JSON.
-
----
-
-## 4. Estrutura do Projeto
-
-```text
-contador-apoio-tratamento/
-├── amplify/                  # Infraestrutura AWS Amplify Gen 2 (CDK)
-│   ├── auth/                 # Amazon Cognito (User Pool & Groups)
-│   ├── data/                 # Amplify Data Schema & RBAC
-│   ├── functions/            # Lambda Functions (Gemini & Secrets Manager)
-│   └── backend.ts            # Backend central e políticas IAM
-├── src/
-│   ├── components/           # Componentes reutilizáveis e layouts
-│   │   ├── common/           # Button, Input, Select, Badge, Card, StatCard, Modal, etc.
-│   │   └── layout/           # Sidebar, Header, AppLayout
-│   ├── contexts/             # AuthContext (RBAC), ToastContext, ThemeContext
-│   ├── pages/                # Telas completas da aplicação
-│   │   ├── Login/            # Login Cognito e recuperação de senha
-│   │   ├── Dashboard/        # 6 StatCards, gráficos, análises IA Gemini
-│   │   ├── RegistrarApoio/   # Registro rápido anti-duplicidade
-│   │   ├── Lancamentos/      # CRUD, Soft Delete, Restore, Filtros, Excel/CSV
-│   │   ├── Atendentes/       # Gestão de atendentes farmacêuticos
-│   │   ├── Metas/            # Versionamento temporal de metas
-│   │   ├── Relatorios/       # Relatório Diário, Mensal e por Atendente
-│   │   ├── Usuarios/         # Gestão de usuários Cognito e perfis
-│   │   ├── Auditoria/        # Trilha de auditoria detalhada
-│   │   ├── Configuracoes/    # Secrets Manager, Gemini, timezone
-│   │   └── Perfil/           # Dados de sessão e troca de senha
-│   ├── services/             # Camada de serviços e persistência
-│   ├── utils/                # Cálculos matemáticos, datas e exportações
-│   ├── validators/           # Schemas Zod compartilhados
-│   └── tests/                # Suíte de testes unitários e de integração
-```
-
----
-
-## 5. Instalação e Execução Local
-
-### Pré-requisitos:
-* Node.js v20+ ou v24+
-* npm v10+
-
-### Passo a passo:
+Copie o arquivo de exemplo para configurar seu ambiente:
 ```bash
-# 1. Clonar o repositório
-git clone https://github.com/maxwellrodriguesferreira/contador-apoio-tratamento.git
-cd contador-apoio-tratamento
-
-# 2. Instalar dependências
-npm install
-
-# 3. Executar em modo desenvolvimento
-npm run dev
-
-# 4. Executar os testes automatizados
-npm run test
+cp .env.example .env
 ```
-A aplicação estará disponível em `http://localhost:3000`.
+
+| Variável | Descrição | Padrão / Exemplo |
+| :--- | :--- | :--- |
+| `CLOUDFLARE_ACCOUNT_ID` | Account ID da Cloudflare (opcional em modo local) | `ex: 9a8b7c6d...` |
+| `CLOUDFLARE_DATABASE_ID` | Database ID do Cloudflare D1 | `ex: 1234-abcd-...` |
+| `CLOUDFLARE_API_TOKEN` | API Token da Cloudflare com permissão D1 Edit | `Bearer token` |
+| `GEMINI_API_KEY` | Chave da Google Gemini API (Google AI Studio) | `AIzaSy...` |
+| `GEMINI_DEFAULT_MODEL` | Modelo padrão de IA | `gemini-3.6-flash` |
+| `ADMIN_EMAIL` | E-mail de login do Administrador | `carlos.admin@drogaria.com.br` |
+| `ADMIN_PASSWORD` | Senha de login do Administrador | `SenhaForte@2026` |
+| `ATENDENTE_EMAIL` | E-mail de login do Atendente | `joao.silva@drogaria.com.br` |
+| `ATENDENTE_PASSWORD` | Senha de login do Atendente | `SenhaForte@2026` |
+| `PORT` | Porta interna da API | `4000` |
+
+> [!NOTE]
+> Se as credenciais da Cloudflare não forem preenchidas, a aplicação inicia automaticamente com a engine local SQLite compatível 1:1 com o Cloudflare D1, populando as tabelas e dados iniciais no volume persistente.
 
 ---
 
-## 6. Credenciais Iniciais de Homologação
+## 4. Execução com Docker e Docker Compose
 
-Para testar todos os fluxos e o controle de acesso RBAC:
+### 4.1. Iniciar a aplicação completa:
+```bash
+docker compose up -d --build
+```
+
+### 4.2. Verificar status dos contêineres:
+```bash
+docker compose ps
+```
+
+### 4.3. Visualizar logs em tempo real:
+```bash
+# Logs de todos os serviços
+docker compose logs -f
+
+# Logs exclusivos do backend
+docker compose logs -f backend
+```
+
+### 4.4. Parar a aplicação:
+```bash
+docker compose down
+```
+
+A aplicação estará acessível em:
+* **Frontend Web**: `http://localhost:3000`
+* **Backend API & Healthcheck**: `http://localhost:4000/api/health`
+
+---
+
+## 5. Credenciais Padrão de Acesso (E-mail e Senha)
 
 * **Administrador Geral (ADMIN)**:
-  * **E-mail**: `carlos.admin@drogaria.com.br`
-  * **Senha**: `SenhaForte@2026`
-  * **Permissões**: Acesso irrestrito a todas as áreas, registros, metas, IA e configurações.
+  * **E-mail**: `carlos.admin@drogaria.com.br` (ou configurado em `ADMIN_EMAIL`)
+  * **Senha**: `SenhaForte@2026` (ou configurada em `ADMIN_PASSWORD`)
+  * **Permissões**: Acesso completo a todas as rotas, lançamentos, auditoria, atendentes, metas, IA e configurações.
 
 * **Atendente Farmacêutico (ATENDENTE)**:
-  * **E-mail**: `joao.silva@drogaria.com.br`
-  * **Senha**: `SenhaForte@2026`
+  * **E-mail**: `joao.silva@drogaria.com.br` (ou configurado em `ATENDENTE_EMAIL`)
+  * **Senha**: `SenhaForte@2026` (ou configurada em `ATENDENTE_PASSWORD`)
   * **Permissões**: Acesso exclusivo em modo somente leitura ao Dashboard e Meu Perfil.
 
-*Você também pode alternar entre os perfis instantaneamente pelo botão "Simular" no cabeçalho superior.*
-
 ---
 
-## 7. Deploy na AWS
+## 6. Desenvolvimento Local e Testes (Sem Docker)
 
-### Deploy via AWS Amplify Hosting & Gen 2:
+Caso queira rodar diretamente no Node.js local:
+
 ```bash
-# Executar deploy do backend e frontend
-npx ampx pipeline-deploy --branch main --app-id <YOUR_APP_ID>
+# 1. Instalar dependências
+npm install
+cd server && npm install && cd ..
+
+# 2. Executar os testes automatizados
+npm run test
+
+# 3. Iniciar o backend (porta 4000)
+cd server && npm run dev
+
+# 4. Iniciar o frontend em outro terminal (porta 3000)
+npm run dev
 ```
 
-### Configuração do Secrets Manager na AWS:
-1. No console AWS, acesse o **AWS Secrets Manager**.
-2. Crie um segredo com o nome `apoio-tratamento/gemini`.
-3. Defina a chave `GEMINI_API_KEY` com sua chave do Google AI Studio.
-4. O backend Lambda possui permissão IAM associada automaticamente via CDK (`amplify/backend.ts`).
-
 ---
 
-## 8. Licença
+## 7. Licença
 Propriedade de Drogaria Central & Clínica Farmacoterapêutica. Todos os direitos reservados.

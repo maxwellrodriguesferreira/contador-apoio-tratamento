@@ -4,7 +4,7 @@ import { App } from './App';
 import { ToastProvider } from './contexts/ToastContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
-import './services/api/amplifyClient';
+import './services/api/cloudflareClient';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

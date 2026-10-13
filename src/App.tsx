@@ -19,7 +19,7 @@ export const App: React.FC = () => {
   const { isAuthenticated, isAdmin } = useAuth();
   const [currentPath, setCurrentPath] = useState<string>('dashboard');
 
-  // Sincroniza dados com a nuvem AWS quando o usuário estiver autenticado
+  // Sincroniza dados com o banco Cloudflare D1 quando o usuário estiver autenticado
   useEffect(() => {
     if (isAuthenticated) {
       CloudSyncService.syncAllFromCloud();

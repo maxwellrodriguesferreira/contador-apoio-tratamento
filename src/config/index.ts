@@ -4,8 +4,9 @@ export const APP_CONFIG = {
   timezone: 'America/Sao_Paulo',
   defaultGeminiModel: 'gemini-3.6-flash',
   supportedModels: ['gemini-3.6-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
-  awsRegion: 'us-east-1',
-  geminiSecretId: 'apoio-tratamento/gemini',
+  apiBaseUrl: import.meta.env.VITE_API_URL || '/api',
+  cloudProvider: 'Cloudflare D1',
+  databaseName: 'cloudflare_d1_apoio_tratamento',
   storageKeys: {
     authSession: 'apoio_tratamento_session',
     userProfiles: 'apoio_tratamento_user_profiles',

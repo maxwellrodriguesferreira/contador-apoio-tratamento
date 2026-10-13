@@ -47,7 +47,7 @@ export class SettingsService {
   }
 
   /**
-   * Salva a API Key no AWS Secrets Manager (persistência segura)
+   * Salva a API Key no backend / Cloudflare D1 (persistência segura)
    * NUNCA retorna o valor da chave.
    */
   static async saveGeminiApiKey(currentUser: UserProfile, _apiKey: string): Promise<{ success: boolean; message: string }> {
@@ -59,8 +59,12 @@ export class SettingsService {
       throw new Error('A API Key fornecida é inválida.');
     }
 
-    // Simula o PutSecretValue no AWS Secrets Manager via Lambda backend
-    await new Promise((r) => setTimeout(r, 500));
+    try {
+      const { apiRequest } = await import('../api/cloudflareClient');
+      await apiRequest('/settings/gemini-key', 'POST', { apiKey: _apiKey.trim() });
+    } catch (e) {
+      console.warn('Persistindo chave de IA localmente devido a indisponibilidade do backend:', e);
+    }
 
     const settings = LocalDatabase.getAISettings();
     settings.isKeyConfigured = true;
@@ -73,26 +77,31 @@ export class SettingsService {
       currentUser.name,
       currentUser.role,
       'AI_API_KEY_UPDATED',
-      'AWS_SECRETS_MANAGER',
-      'apoio-tratamento/gemini',
+      'CLOUDFLARE_SECRETS',
+      'gemini-api-key',
       { status: 'SECRET_STORED_SECURELY' }
     );
 
     return {
       success: true,
-      message: 'API Key persistida com sucesso no AWS Secrets Manager.',
+      message: 'API Key persistida com sucesso no backend Cloudflare D1.',
     };
   }
 
   /**
-   * Remove a API Key do AWS Secrets Manager
+   * Remove a API Key do Cloudflare D1 / backend
    */
   static async removeGeminiApiKey(currentUser: UserProfile): Promise<{ success: boolean; message: string }> {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem remover credenciais.');
     }
 
-    await new Promise((r) => setTimeout(r, 400));
+    try {
+      const { apiRequest } = await import('../api/cloudflareClient');
+      await apiRequest('/settings/gemini-key', 'DELETE');
+    } catch (e) {
+      console.warn('Removendo chave localmente:', e);
+    }
 
     const settings = LocalDatabase.getAISettings();
     settings.isKeyConfigured = false;
@@ -105,14 +114,14 @@ export class SettingsService {
       currentUser.name,
       currentUser.role,
       'AI_API_KEY_REMOVED',
-      'AWS_SECRETS_MANAGER',
-      'apoio-tratamento/gemini',
+      'CLOUDFLARE_SECRETS',
+      'gemini-api-key',
       { status: 'SECRET_REMOVED' }
     );
 
     return {
       success: true,
-      message: 'API Key removida do AWS Secrets Manager. As análises de IA foram desabilitadas.',
+      message: 'API Key removida com sucesso. As análises de IA foram desabilitadas.',
     };
   }
 

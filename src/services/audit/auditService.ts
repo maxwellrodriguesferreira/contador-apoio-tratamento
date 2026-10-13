@@ -26,7 +26,7 @@ export class AuditService {
       entityId,
       metadata,
       createdAt: new Date().toISOString(),
-      ipAddress: '192.168.1.100 (AWS Cognito Session)',
+      ipAddress: '192.168.1.100 (Cloudflare Edge Session)',
     };
 
     logs.unshift(newLog);

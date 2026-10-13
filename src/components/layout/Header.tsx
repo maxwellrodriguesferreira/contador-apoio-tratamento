@@ -24,8 +24,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
 
         <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-surface-container text-on-surface text-xs font-medium">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="font-semibold text-primary">AWS Produção</span>
-          <span className="text-outline hidden sm:inline">• Cognito &amp; Secrets Manager</span>
+          <span className="font-semibold text-primary">Cloudflare Edge</span>
+          <span className="text-outline hidden sm:inline">• D1 Database &amp; Gemini AI</span>
         </div>
       </div>
 

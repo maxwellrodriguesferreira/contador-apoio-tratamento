@@ -414,7 +414,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
           <div className="mt-3 pt-2 border-t border-outline-variant/20 flex items-center justify-between text-[11px] text-outline">
             <span>Cálculos oficiais efetuados deterministicamente pelo backend.</span>
-            <span className="font-medium text-secondary">AWS Secrets Manager • KMS</span>
+            <span className="font-medium text-secondary">Cloudflare Edge • GEMINI_API_KEY</span>
           </div>
         </div>
       </div>

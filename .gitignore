@@ -24,10 +24,15 @@ dist-ssr
 *.sln
 *.sw?
 
-# AWS Amplify
-.amplify
-amplifyconfiguration*.json
-aws-exports.js
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Local Database & data
+data/
+server/data/
+server/dist/
 
 # TypeScript cache
 *.tsbuildinfo

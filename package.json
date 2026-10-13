@@ -9,11 +9,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
   },
   "dependencies": {
-    "@aws-amplify/ui-react": "^6.8.0",
-    "aws-amplify": "^6.12.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.475.0",
@@ -23,8 +24,6 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@aws-amplify/backend": "^1.14.0",
-    "@aws-amplify/backend-cli": "^1.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^22.13.4",
@@ -32,8 +31,6 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
-    "aws-cdk-lib": "^2.179.0",
-    "constructs": "^10.4.2",
     "jsdom": "^26.0.0",
     "postcss": "^8.5.2",
     "react": "^18.3.1",

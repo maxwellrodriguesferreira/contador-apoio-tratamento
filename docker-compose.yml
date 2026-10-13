@@ -1,0 +1,60 @@
+services:
+  # 1. API Backend (Cloudflare D1 Engine & Google Gemini)
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: contador-apoio-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      # Credenciais do Banco de Dados Cloudflare D1 (opcionais: se não fornecidas, opera com o D1 Engine Local SQLite)
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
+      - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
+      # Google Gemini API
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.6-flash}
+      # Credenciais padrão de acesso (e-mail e senha)
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-}
+      - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-}
+      # Diretório de persistência do banco local
+      - DATABASE_DIR=/app/data
+    volumes:
+      - d1_sqlite_data:/app/data
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:4000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - apoio-network
+
+  # 2. Frontend Web (React 18 + Vite + Tailwind + Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: contador-apoio-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - apoio-network
+
+volumes:
+  d1_sqlite_data:
+    name: contador_apoio_d1_data
+
+networks:
+  apoio-network:
+    name: contador_apoio_network
+    driver: bridge

@@ -68,16 +68,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          {/* Status AWS */}
+          {/* Status Cloudflare D1 */}
           <div className="px-4 pt-3 pb-2">
             <div className="flex items-center justify-between p-2 bg-surface-container-low rounded-lg border border-outline-variant/20">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span className="text-[11px] font-bold text-tertiary-container uppercase tracking-wider">
-                  AWS Conectado
+                  Cloudflare D1
                 </span>
               </div>
-              <span className="text-[10px] text-outline font-medium">Cognito / KMS</span>
+              <span className="text-[10px] text-outline font-medium">SQL Edge / Docker</span>
             </div>
           </div>
 

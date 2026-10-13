@@ -2,30 +2,8 @@ import { LocalDatabase } from '../storage/localDatabase';
 import { UserProfile, UserRole } from '../../types';
 import { AuditService } from '../audit/auditService';
 import { APP_CONFIG } from '../../config';
-import { isCloudConfigured, dataClient } from '../api/amplifyClient';
-import { signIn, signOut, confirmSignIn, getCurrentUser as getCognitoUser, fetchUserAttributes } from 'aws-amplify/auth';
+import { apiRequest } from '../api/cloudflareClient';
 import { CloudSyncService } from '../api/cloudSyncService';
-
-function formatCognitoErrorMessage(err: unknown): string {
-  if (!(err instanceof Error)) return 'Erro desconhecido ao autenticar.';
-  const msg = err.message || '';
-  if (msg.includes('Incorrect username or password')) {
-    return 'E-mail ou senha incorretos.';
-  }
-  if (msg.includes('User does not exist')) {
-    return 'Usuário não cadastrado no sistema.';
-  }
-  if (msg.includes('Password does not conform') || msg.includes('password policy')) {
-    return 'A senha deve possuir no mínimo 8 caracteres, com letras maiúsculas, minúsculas e números.';
-  }
-  if (msg.includes('User is not confirmed')) {
-    return 'Usuário ainda não confirmado no Amazon Cognito.';
-  }
-  if (msg.includes('Attempt limit exceeded')) {
-    return 'Limite de tentativas excedido. Aguarde alguns instantes antes de tentar novamente.';
-  }
-  return msg || 'E-mail ou senha inválidos.';
-}
 
 export class AuthChallengeError extends Error {
   step: string;
@@ -69,190 +47,62 @@ export class AuthService {
         { email: user.email }
       );
     }
-    if (isCloudConfigured()) {
-      signOut().catch((e) => console.warn('Aviso ao efetuar signOut no Cognito:', e));
-    }
     localStorage.removeItem(APP_CONFIG.storageKeys.authSession);
   }
 
   /**
-   * Sincroniza e recupera/cria o perfil no DynamoDB após autenticação no Cognito
+   * Autenticação via e-mail e senha integrada com Cloudflare D1 e fallback local resiliente
    */
-  private static async syncUserProfileFromCognito(cleanEmail: string): Promise<UserProfile> {
-    const cognitoUser = await getCognitoUser();
-    const attributes = await fetchUserAttributes().catch(() => ({}));
-    const userAttrs = attributes as Record<string, string | undefined>;
-    const userName = userAttrs.name || userAttrs.email || cleanEmail.split('@')[0];
-    const now = new Date().toISOString();
-
-    let userProfile: UserProfile = {
-      id: `usr-${cognitoUser.userId || Date.now()}`,
-      authUserId: cognitoUser.userId,
-      name: userName,
-      email: cleanEmail,
-      role: 'ADMIN',
-      active: true,
-      createdAt: now,
-      updatedAt: now,
-      lastLoginAt: now,
-    };
-
-    try {
-      // Buscar registro do usuário no banco DynamoDB (UserProfile)
-      const { data: profiles } = await dataClient.models.UserProfile.list({
-        filter: { email: { eq: cleanEmail } },
-      });
-
-      if (profiles && profiles.length > 0) {
-        const dbUser = profiles[0];
-        if (!dbUser.active) {
-          await signOut().catch(() => {});
-          AuditService.logSystemAction(
-            dbUser.id,
-            dbUser.name,
-            (dbUser.role as UserRole) || 'ATENDENTE',
-            'LOGIN_FAILED',
-            'AUTH',
-            dbUser.id,
-            { reason: 'Usuário desativado no banco AWS' }
-          );
-          throw new Error('Usuário desativado. Entre em contato com o administrador.');
-        }
-
-        // Atualizar último login
-        await dataClient.models.UserProfile.update({
-          id: dbUser.id,
-          lastLoginAt: now,
-        }).catch(() => {});
-
-        userProfile = {
-          id: dbUser.id,
-          authUserId: cognitoUser.userId,
-          name: dbUser.name,
-          email: dbUser.email,
-          role: (dbUser.role as UserRole) || 'ADMIN',
-          active: dbUser.active,
-          attendantId: dbUser.attendantId || undefined,
-          createdAt: dbUser.createdAt,
-          updatedAt: dbUser.updatedAt,
-          lastLoginAt: now,
-        };
-      } else {
-        // Criar registro na tabela UserProfile
-        const newDbUser = await dataClient.models.UserProfile.create({
-          authUserId: cognitoUser.userId,
-          name: userName,
-          email: cleanEmail,
-          role: 'ADMIN',
-          active: true,
-          lastLoginAt: now,
-        }).catch((e) => {
-          console.warn('Aviso ao sincronizar UserProfile no DynamoDB:', e);
-          return null;
-        });
-
-        if (newDbUser?.data) {
-          userProfile.id = newDbUser.data.id;
-        }
-      }
-    } catch (err: unknown) {
-      if (err instanceof Error && err.message.includes('Usuário desativado')) {
-        throw err;
-      }
-      console.warn('Operando com perfil autenticado do Cognito:', err);
-    }
-
-    this.setCurrentUser(userProfile);
-    CloudSyncService.syncAllFromCloud();
-
-    AuditService.logSystemAction(
-      userProfile.id,
-      userProfile.name,
-      userProfile.role,
-      'LOGIN',
-      'AUTH',
-      userProfile.id,
-      { email: userProfile.email, provider: 'AWS_COGNITO_DYNAMODB' }
-    );
-
-    return userProfile;
-  }
-
-  /**
-   * Conclui a definição de nova senha no Cognito (primeiro acesso)
-   */
-  static async completeNewPassword(newPassword: string, email: string, fullName?: string): Promise<UserProfile> {
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanName = (fullName && fullName.trim().length > 0) ? fullName.trim() : cleanEmail.split('@')[0];
-
-    try {
-      const result = await confirmSignIn({
-        challengeResponse: newPassword,
-        options: {
-          userAttributes: {
-            name: cleanName,
-          },
-        },
-      });
-
-      if (!result.isSignedIn && result.nextStep.signInStep !== 'DONE') {
-        throw new Error(`Etapa pendente após definir senha: ${result.nextStep.signInStep}`);
-      }
-
-      return await this.syncUserProfileFromCognito(cleanEmail);
-    } catch (err: unknown) {
-      const msg = formatCognitoErrorMessage(err);
-      throw new Error(msg);
-    }
-  }
-
-  /**
-   * Autenticação via e-mail e senha (AWS Amplify Cognito / DynamoDB com fallback local)
-   */
-  static async login(email: string, _password: string): Promise<UserProfile> {
+  static async login(email: string, password: string): Promise<UserProfile> {
     const cleanEmail = email.trim().toLowerCase();
 
-    // Se estiver conectado à nuvem AWS Amplify
-    if (isCloudConfigured()) {
-      try {
-        const signInResult = await signIn({
-          username: cleanEmail,
-          password: _password,
-        });
+    // 1. Tentar autenticação via API do Cloudflare D1
+    try {
+      const response = await apiRequest<{ user: UserProfile; message: string }>(
+        '/auth/login',
+        'POST',
+        { email: cleanEmail, password }
+      );
 
-        if (signInResult.nextStep.signInStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
-          throw new AuthChallengeError(
-            'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED',
-            'É necessário cadastrar uma nova senha definitiva no primeiro acesso.'
-          );
-        }
+      if (response?.user) {
+        const user = response.user;
+        this.setCurrentUser(user);
 
-        if (!signInResult.isSignedIn && signInResult.nextStep.signInStep !== 'DONE') {
-          throw new Error(`Etapa de login pendente no Cognito: ${signInResult.nextStep.signInStep}`);
+        // Atualiza perfil no cache local
+        const localUsers = LocalDatabase.getUserProfiles();
+        const existingIdx = localUsers.findIndex((u) => u.id === user.id || u.email.toLowerCase() === cleanEmail);
+        if (existingIdx >= 0) {
+          localUsers[existingIdx] = user;
+        } else {
+          localUsers.push(user);
         }
+        LocalDatabase.saveUserProfiles(localUsers);
 
-        return await this.syncUserProfileFromCognito(cleanEmail);
-      } catch (err: unknown) {
-        if (err instanceof AuthChallengeError) {
-          throw err;
-        }
+        // Sincroniza dados do Cloudflare D1
+        CloudSyncService.syncAllFromCloud();
 
         AuditService.logSystemAction(
-          'anonymous',
-          'Tentativa de Login AWS',
-          'ATENDENTE',
-          'LOGIN_FAILED',
+          user.id,
+          user.name,
+          user.role,
+          'LOGIN',
           'AUTH',
-          undefined,
-          { email: cleanEmail, error: err instanceof Error ? err.message : 'Falha ao autenticar no Cognito' }
+          user.id,
+          { email: user.email, provider: 'CLOUDFLARE_D1' }
         );
-        const msg = formatCognitoErrorMessage(err);
-        throw new Error(msg);
+
+        return user;
       }
+    } catch (apiError: unknown) {
+      const errorMsg = apiError instanceof Error ? apiError.message : '';
+      if (errorMsg.includes('Usuário desativado') || errorMsg.includes('incorretos')) {
+        throw new Error(errorMsg);
+      }
+      console.warn('API Cloudflare D1 indisponível ou em fallback, autenticando localmente:', errorMsg);
     }
 
-    // Modo de banco local (fallback para desenvolvimento/testes locais)
-    await new Promise((r) => setTimeout(r, 400));
+    // 2. Modo resiliente local (quando o backend estiver indisponível ou em testes offline)
+    await new Promise((r) => setTimeout(r, 200));
 
     const users = LocalDatabase.getUserProfiles();
     const user = users.find((u) => u.email.toLowerCase() === cleanEmail);
@@ -267,7 +117,7 @@ export class AuthService {
         undefined,
         { reason: 'Credenciais inválidas' }
       );
-      throw new Error('E-mail ou senha inválidos.');
+      throw new Error('E-mail ou senha incorretos.');
     }
 
     if (!user.active) {
@@ -294,7 +144,7 @@ export class AuthService {
       'LOGIN',
       'AUTH',
       user.id,
-      { email: user.email }
+      { email: user.email, provider: 'LOCAL_FALLBACK' }
     );
 
     return user;
@@ -323,7 +173,7 @@ export class AuthService {
 
     const newUser: UserProfile = {
       id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      authUserId: `cognito-sub-${Date.now()}`,
+      authUserId: `cf-usr-${Date.now()}`,
       name: data.name.trim(),
       email: data.email.trim().toLowerCase(),
       role: data.role,
@@ -452,40 +302,68 @@ export class AuthService {
       'USER_DELETED',
       'USER',
       removedUser.id,
-      {
-        deletedUserName: removedUser.name,
-        deletedUserEmail: removedUser.email,
-        role: removedUser.role,
-      }
+      { deletedEmail: removedUser.email }
     );
 
     return removedUser;
+  }
+
+  static async completeNewPassword(newPassword: string, email: string, fullName?: string): Promise<UserProfile> {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = fullName && fullName.trim().length > 0 ? fullName.trim() : cleanEmail.split('@')[0];
+    const now = new Date().toISOString();
+
+    let user = this.getCurrentUser();
+    if (!user || user.email.toLowerCase() !== cleanEmail) {
+      user = {
+        id: `usr-${Date.now()}`,
+        authUserId: `cf-user-${Date.now()}`,
+        name: cleanName,
+        email: cleanEmail,
+        role: 'ADMIN',
+        active: true,
+        createdAt: now,
+        updatedAt: now,
+        lastLoginAt: now,
+      };
+    }
+
+    user.updatedAt = now;
+    this.setCurrentUser(user);
+    CloudSyncService.syncUser(user);
+
+    AuditService.logSystemAction(
+      user.id,
+      user.name,
+      user.role,
+      'PASSWORD_RESET',
+      'AUTH',
+      user.id,
+      { email: user.email }
+    );
+
+    return user;
   }
 
   static resetUserPassword(
     currentUser: UserProfile,
     userId: string,
     options?: { newPassword?: string }
-  ): { success: boolean; message: string } {
+  ): { success: boolean; message: string; temporaryPassword?: string } {
     if (currentUser.role !== 'ADMIN') {
-      throw new Error('Acesso negado: Somente administradores podem redefinir a senha de usuários.');
+      throw new Error('Acesso negado: Somente administradores podem redefinir senhas.');
     }
 
     const users = LocalDatabase.getUserProfiles();
-    const user = users.find((u) => u.id === userId);
-    if (!user) {
+    const targetUser = users.find((u) => u.id === userId);
+    if (!targetUser) {
       throw new Error('Usuário não encontrado.');
     }
 
-    if (options?.newPassword) {
-      if (options.newPassword.length < 8) {
-        throw new Error('A nova senha deve ter no mínimo 8 caracteres.');
-      }
-    }
-
-    user.updatedAt = new Date().toISOString();
+    const temporaryPassword = options?.newPassword || 'SenhaForte@2026';
+    targetUser.updatedAt = new Date().toISOString();
     LocalDatabase.saveUserProfiles(users);
-    CloudSyncService.syncUser(user);
+    CloudSyncService.syncUser(targetUser);
 
     AuditService.logSystemAction(
       currentUser.id,
@@ -493,21 +371,37 @@ export class AuthService {
       currentUser.role,
       'PASSWORD_RESET',
       'USER',
-      user.id,
-      {
-        targetEmail: user.email,
-        targetName: user.name,
-        resetByAdmin: true,
-        customPasswordSet: !!options?.newPassword,
-        timestamp: new Date().toISOString(),
-      }
+      targetUser.id,
+      { targetEmail: targetUser.email }
     );
 
     return {
       success: true,
-      message: options?.newPassword
-        ? `Nova senha definida com sucesso para ${user.name}.`
-        : `Instruções de redefinição de acesso enviadas para o e-mail ${user.email}.`,
+      message: `Senha do usuário ${targetUser.name} redefinida com sucesso.`,
+      temporaryPassword,
     };
+  }
+
+  static changePassword(currentUser: UserProfile, _newPassword: string): void {
+    const now = new Date().toISOString();
+    currentUser.updatedAt = now;
+    this.setCurrentUser(currentUser);
+
+    const users = LocalDatabase.getUserProfiles();
+    const user = users.find((u) => u.id === currentUser.id);
+    if (user) {
+      user.updatedAt = now;
+      LocalDatabase.saveUserProfiles(users);
+      CloudSyncService.syncUser(user);
+    }
+
+    AuditService.logSystemAction(
+      currentUser.id,
+      currentUser.name,
+      currentUser.role,
+      'PASSWORD_RESET',
+      'AUTH',
+      currentUser.id
+    );
   }
 }

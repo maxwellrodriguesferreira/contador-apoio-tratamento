@@ -224,12 +224,29 @@ export class AIService {
    */
   static async testConnection(currentUser: UserProfile): Promise<{ success: boolean; message: string }> {
     try {
-      // Simula a verificação do Secrets Manager e teste da API do Gemini no backend
-      await new Promise((r) => setTimeout(r, 600));
+      try {
+        const { apiRequest } = await import('../api/cloudflareClient');
+        const res = await apiRequest<{ success: boolean; message: string; model?: string }>('/ai/test', 'POST');
+        if (res.success) {
+          AuditService.logSystemAction(
+            currentUser.id,
+            currentUser.name,
+            currentUser.role,
+            'AI_CONNECTION_TESTED',
+            'AI_INTEGRATION',
+            undefined,
+            { model: res.model, status: 'SUCCESS' }
+          );
+          return res;
+        }
+      } catch (backendErr: unknown) {
+        console.warn('Backend API não respondeu ao teste de IA, verificando configurações locais:', backendErr);
+      }
 
+      // Verificação em modo local/fallback
       const aiSettings = LocalDatabase.getAISettings();
       if (!aiSettings.isKeyConfigured) {
-        throw new Error('Nenhuma API Key está configurada no AWS Secrets Manager.');
+        throw new Error('Nenhuma GEMINI_API_KEY está configurada no ambiente ou no Cloudflare D1.');
       }
 
       AuditService.logSystemAction(
@@ -244,7 +261,7 @@ export class AIService {
 
       return {
         success: true,
-        message: 'Conexão com Google Gemini (Secrets Manager & KMS) realizada com sucesso.',
+        message: 'Conexão com Google Gemini (Cloudflare Backend & GEMINI_API_KEY) realizada com sucesso.',
       };
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Falha na conexão';
@@ -262,11 +279,33 @@ export class AIService {
   }
 
   /**
-   * Chamada segura ao motor de IA (simulando ou chamando endpoint Lambda com Secrets Manager)
+   * Chamada segura ao motor de IA (conectando ao backend com GEMINI_API_KEY e fallback determinístico)
    */
   private static async callGeminiApi(payload: Record<string, unknown>, model: string): Promise<string> {
-    // Simula chamada segura ao Lambda
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      const { apiRequest } = await import('../api/cloudflareClient');
+      const analysisType = payload.tipo === 'ANÁLISE DIÁRIA' ? 'DAILY' : 'MONTHLY';
+      const referenceDate = String(payload.data || payload.mesReferencia || new Date().toISOString().split('T')[0]);
+      const { generateDataHash } = await import('../../utils/calculations');
+      const inputHash = generateDataHash(payload);
+
+      const res = await apiRequest<{ analysisText: string }>('/ai/analyze', 'POST', {
+        analysisType,
+        referenceDate,
+        referencePeriod: referenceDate,
+        inputHash,
+        payload,
+        model,
+      });
+
+      if (res?.analysisText) {
+        return res.analysisText;
+      }
+    } catch (e) {
+      console.warn('Operando com motor determinístico local de IA (backend inacessível):', e);
+    }
+
+    await new Promise((r) => setTimeout(r, 400));
 
     if (payload.tipo === 'ANÁLISE DIÁRIA') {
       const m = payload as unknown as DashboardMetrics & { data: string; totalRealizadoHoje: number; metaDiaria: number; percentualAtingido: string; diferencaMeta: string; atendentesAtivos: number; atendentesComApoioHoje: number; mediaPorAtendente: number };

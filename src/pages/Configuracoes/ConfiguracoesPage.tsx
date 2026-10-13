@@ -47,7 +47,7 @@ export const ConfiguracoesPage: React.FC = () => {
     try {
       const result = await AIService.testConnection(user);
       setTestResult(result);
-      showToast(result.message, 'success', 'Conexão AWS/Gemini OK');
+      showToast(result.message, 'success', 'Conexão Cloudflare/Gemini OK');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Falha na conexão com o Gemini.';
       setTestResult({ success: false, message: msg });
@@ -67,7 +67,7 @@ export const ConfiguracoesPage: React.FC = () => {
       setAiSettings(SettingsService.getAISettings());
       setIsApiKeyModalOpen(false);
       setApiKeyInput('');
-      showToast(res.message, 'success', 'AWS Secrets Manager');
+      showToast(res.message, 'success', 'Cloudflare Secrets / D1');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao salvar API Key.';
       showToast(msg, 'error');
@@ -132,7 +132,7 @@ export const ConfiguracoesPage: React.FC = () => {
         </div>
         <h2 className="text-xl font-bold text-on-surface mb-2">Acesso Restrito ao Administrador</h2>
         <p className="text-sm text-on-surface-variant max-w-md">
-          Apenas administradores podem gerenciar integrações, modelos de IA e chaves do AWS Secrets Manager.
+          Apenas administradores podem gerenciar integrações, modelos de IA e chaves seguras do sistema.
         </p>
       </div>
     );
@@ -143,11 +143,11 @@ export const ConfiguracoesPage: React.FC = () => {
       <div>
         <h1 className="text-2xl font-bold text-on-surface tracking-tight">Configurações do Sistema</h1>
         <p className="text-xs text-on-surface-variant mt-1">
-          Parâmetros globais, integração com Google Gemini, AWS Secrets Manager e governança
+          Parâmetros globais, integração com Google Gemini, Cloudflare D1 e governança
         </p>
       </div>
 
-      {/* Seção 1: Inteligência Artificial (Google Gemini & Secrets Manager) */}
+      {/* Seção 1: Inteligência Artificial (Google Gemini & Cloudflare Backend) */}
       <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-modal p-6 sm:p-8 flex flex-col gap-6">
         <div className="flex items-start justify-between gap-4 border-b border-outline-variant/20 pb-4">
           <div className="flex items-center gap-3">
@@ -166,22 +166,22 @@ export const ConfiguracoesPage: React.FC = () => {
           </Badge>
         </div>
 
-        {/* Status da Credencial no Secrets Manager */}
+        {/* Status da Credencial no Backend Seguro */}
         <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <span className="text-[11px] font-bold text-outline uppercase tracking-wider">
-              Armazenamento Seguro (KMS)
+              Armazenamento Seguro (Backend &amp; Cloudflare D1)
             </span>
             <div className="flex items-center gap-2">
               <span className="font-mono text-sm font-bold text-on-surface">
-                {APP_CONFIG.geminiSecretId}
+                GEMINI_API_KEY
               </span>
               <span className="text-xs text-outline">
                 {aiSettings.isKeyConfigured ? '(••••••••••••••••)' : '(Não configurada)'}
               </span>
             </div>
             <span className="text-[11px] text-outline">
-              A chave é persistida exclusivamente no AWS Secrets Manager. Nunca trafega para o frontend.
+              A chave é persistida com segurança no ambiente do backend / Cloudflare D1. Nunca trafega para o frontend.
             </span>
           </div>
 
@@ -379,7 +379,7 @@ export const ConfiguracoesPage: React.FC = () => {
           isOpen={isApiKeyModalOpen}
           onClose={() => setIsApiKeyModalOpen(false)}
           title="Configurar API Key do Google Gemini"
-          subtitle="O segredo será criptografado e persistido no AWS Secrets Manager."
+          subtitle="A credencial será persistida com segurança no Cloudflare D1 / backend."
           footer={
             <>
               <Button variant="outline" size="sm" onClick={() => setIsApiKeyModalOpen(false)}>
@@ -390,16 +390,16 @@ export const ConfiguracoesPage: React.FC = () => {
                 size="sm"
                 onClick={handleSaveApiKey}
                 isLoading={isSavingApiKey}
-                loadingText="Criptografando e Salvando..."
+                loadingText="Salvando..."
               >
-                Salvar Segredo no Secrets Manager
+                Salvar Credencial Segura
               </Button>
             </>
           }
         >
           <form onSubmit={handleSaveApiKey} className="flex flex-col gap-4 text-xs">
             <p className="text-on-surface-variant leading-relaxed">
-              Insira sua chave obtida no Google AI Studio. O backend AWS associará o valor ao KMS e nenhum usuário ou código frontend terá acesso em texto plano.
+              Insira sua chave obtida no Google AI Studio (ou defina a variável GEMINI_API_KEY no arquivo .env do Docker Compose). O backend protege a credencial e nenhum usuário ou código frontend terá acesso em texto plano.
             </p>
 
             <Input
