@@ -2,7 +2,7 @@
 
 Sistema web corporativo completo projetado para drogarias e redes farmacêuticas para registro, acompanhamento, auditoria imutável, cálculo determinístico de metas e análise preditiva por Inteligência Artificial (Google Gemini) de **Apoios ao Tratamento**.
 
-Totalmente conteinerizado com **Docker & Docker Compose** e com suporte nativo a banco de dados **Cloudflare D1**.
+Totalmente conteinerizado com **Docker & Docker Compose**, integrado a **redes Docker compartilhadas** com proxy reverso Nginx central e suporte nativo ao banco de dados **Cloudflare D1**.
 
 ---
 
@@ -29,28 +29,31 @@ Atendente (João Silva)
 ## 2. Arquitetura e Stack Tecnológica
 
 ```text
-                     USUÁRIO (Navegador)
-                             │
-                             ▼
-               ┌───────────────────────────┐
-               │    FRONTEND (Porta 3000)  │
-               │  Nginx Alpine • React 18  │
-               │ Vite • Tailwind • Recharts│
-               └─────────────┬─────────────┘
-                             │
-                     (proxy /api/*)
-                             │
-                             ▼
-               ┌───────────────────────────┐
-               │    BACKEND (Porta 4000)   │
-               │   Node.js • Express • TS  │
-               └─────────────┬─────────────┘
-                             │
-             ┌───────────────┴───────────────┐
-             │                               │
-             ▼                               ▼
-    CLOUDFLARE D1 (Edge SQL)          GOOGLE GEMINI API
- (Dual Engine: Remote / Local)       (gemini-3.6-flash)
+               INTERNET / NAVEGADOR
+                       │
+                       ▼
+       ┌───────────────────────────────┐
+       │   NGINX PROXY CENTRAL (Host)  │
+       │    (Rede Docker Compartilhada) │
+       └───────────────┬───────────────┘
+                       │
+                       ▼ (http://contador-apoio-frontend:80)
+       ┌───────────────────────────────┐
+       │     FRONTEND (Nginx Alpine)   │
+       │   React 18 • Vite • Tailwind  │
+       └───────────────┬───────────────┘
+                       │ (proxy /api/*)
+                       ▼ (http://backend:4000)
+       ┌───────────────────────────────┐
+       │     BACKEND (Node.js + TS)    │
+       │     API REST • Express        │
+       └───────────────┬───────────────┘
+                       │
+       ┌───────────────┴───────────────┐
+       │                               │
+       ▼                               ▼
+  CLOUDFLARE D1 (Edge SQL)      GOOGLE GEMINI API
+ (Dual Engine: Remote / Local)  (gemini-3.6-flash)
 ```
 
 ### Tecnologias:
@@ -60,7 +63,7 @@ Atendente (João Silva)
   * Motor relacional SQL com integridade ACID, soft delete, concorrência otimista (`version`) e trilha de auditoria (`old_value` / `new_value`).
   * Suporte dual transparente: **Cloudflare D1 Edge REST API** (produção) e **SQLite nativo** com volume persistente (execução local / offline).
 * **Inteligência Artificial**: Google Gemini (`gemini-3.6-flash`), com prompt corporativo em PT-BR, chave protegida exclusivamente no backend (`GEMINI_API_KEY`) e cache determinístico no Cloudflare D1 por hash (`input_hash`).
-* **Conteinerização**: Docker Multi-stage Builds e Docker Compose com healthcheck integrado.
+* **Conteinerização & Rede**: Docker Multi-stage Builds, Docker Compose com suporte a **rede externa compartilhada** (`shared_network`) e rede interna isolada (`internal_network`).
 
 ---
 
@@ -73,6 +76,9 @@ cp .env.example .env
 
 | Variável | Descrição | Padrão / Exemplo |
 | :--- | :--- | :--- |
+| `DOCKER_SHARED_NETWORK` | Nome da rede docker externa compartilhada com o Nginx Proxy | `shared-network` |
+| `FRONTEND_PORT` | Porta de mapeamento do Frontend no host (opcional) | `3000` |
+| `BACKEND_PORT` | Porta de mapeamento do Backend no host (opcional) | `4000` |
 | `CLOUDFLARE_ACCOUNT_ID` | Account ID da Cloudflare (opcional em modo local) | `ex: 9a8b7c6d...` |
 | `CLOUDFLARE_DATABASE_ID` | Database ID do Cloudflare D1 | `ex: 1234-abcd-...` |
 | `CLOUDFLARE_API_TOKEN` | API Token da Cloudflare com permissão D1 Edit | `Bearer token` |
@@ -82,51 +88,73 @@ cp .env.example .env
 | `ADMIN_PASSWORD` | Senha de login do Administrador | `SenhaForte@2026` |
 | `ATENDENTE_EMAIL` | E-mail de login do Atendente | `joao.silva@drogaria.com.br` |
 | `ATENDENTE_PASSWORD` | Senha de login do Atendente | `SenhaForte@2026` |
-| `PORT` | Porta interna da API | `4000` |
-
-> [!NOTE]
-> Se as credenciais da Cloudflare não forem preenchidas, a aplicação inicia automaticamente com a engine local SQLite compatível 1:1 com o Cloudflare D1, populando as tabelas e dados iniciais no volume persistente.
 
 ---
 
-## 4. Execução com Docker e Docker Compose
+## 4. Integração com a Rede Docker Compartilhada & Proxy Nginx Central
 
-### 4.1. Iniciar a aplicação completa:
+### 4.1. Garantir que a rede compartilhada existe
+Se você já possui uma rede docker compartilhada (ex: `shared-network`, `proxy-network` ou `nginx-proxy`), certifique-se de que ela está criada:
 ```bash
-docker compose up -d --build
+docker network create shared-network
+```
+*(Caso use outro nome de rede, basta definir `DOCKER_SHARED_NETWORK=seu_nome_de_rede` no `.env`)*.
+
+### 4.2. Configuração do Proxy Nginx Central (Upstream)
+No container ou servidor do seu Nginx Proxy compartilhado (ex: Nginx Proxy Manager, Traefik ou Nginx tradicional), adicione a rota para o container do frontend:
+
+```nginx
+# Exemplo de bloco no Nginx Proxy Central do host:
+server {
+    listen 80;
+    server_name apoio.suadrogaria.com.br;
+
+    location / {
+        proxy_pass http://contador-apoio-frontend:80;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+> O container `contador-apoio-frontend` já inclui o proxy reverso interno automático para a rota `/api/*` encaminhando para o container `contador-apoio-backend:4000`. Portanto, seu Nginx central só precisa apontar para `http://contador-apoio-frontend:80`.
+
+---
+
+## 5. Execução com Docker Compose
+
+### 5.1. Iniciar a aplicação:
+```bash
+docker compose up -d
 ```
 
-### 4.2. Verificar status dos contêineres:
+### 5.2. Verificar status dos contêineres:
 ```bash
 docker compose ps
 ```
 
-### 4.3. Visualizar logs em tempo real:
+### 5.3. Logs dos serviços:
 ```bash
-# Logs de todos os serviços
 docker compose logs -f
-
-# Logs exclusivos do backend
-docker compose logs -f backend
 ```
 
-### 4.4. Parar a aplicação:
+### 5.4. Parar a aplicação:
 ```bash
 docker compose down
 ```
 
-A aplicação estará acessível em:
-* **Frontend Web**: `http://localhost:3000`
-* **Backend API & Healthcheck**: `http://localhost:4000/api/health`
-
 ---
 
-## 5. Credenciais Padrão de Acesso (E-mail e Senha)
+## 6. Credenciais Padrão de Acesso (E-mail e Senha)
 
 * **Administrador Geral (ADMIN)**:
   * **E-mail**: `carlos.admin@drogaria.com.br` (ou configurado em `ADMIN_EMAIL`)
   * **Senha**: `SenhaForte@2026` (ou configurada em `ADMIN_PASSWORD`)
-  * **Permissões**: Acesso completo a todas as rotas, lançamentos, auditoria, atendentes, metas, IA e configurações.
+  * **Permissões**: Acesso irrestrito a todas as áreas, registros, metas, IA e configurações.
 
 * **Atendente Farmacêutico (ATENDENTE)**:
   * **E-mail**: `joao.silva@drogaria.com.br` (ou configurado em `ATENDENTE_EMAIL`)
@@ -135,26 +163,13 @@ A aplicação estará acessível em:
 
 ---
 
-## 6. Desenvolvimento Local e Testes (Sem Docker)
-
-Caso queira rodar diretamente no Node.js local:
+## 7. Testes Automatizados
 
 ```bash
-# 1. Instalar dependências
-npm install
-cd server && npm install && cd ..
-
-# 2. Executar os testes automatizados
 npm run test
-
-# 3. Iniciar o backend (porta 4000)
-cd server && npm run dev
-
-# 4. Iniciar o frontend em outro terminal (porta 3000)
-npm run dev
 ```
 
 ---
 
-## 7. Licença
+## 8. Licença
 Propriedade de Drogaria Central & Clínica Farmacoterapêutica. Todos os direitos reservados.

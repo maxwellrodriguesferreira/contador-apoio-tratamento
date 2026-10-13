@@ -7,10 +7,10 @@ services:
     container_name: contador-apoio-backend
     restart: unless-stopped
     ports:
-      - "4000:4000"
+      - "${BACKEND_PORT:-4000}:4000"
     environment:
       - PORT=4000
-      # Credenciais do Banco de Dados Cloudflare D1 (opcionais: se não fornecidas, opera com o D1 Engine Local SQLite)
+      # Credenciais do Banco de Dados Cloudflare D1
       - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
       - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-}
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
@@ -18,24 +18,25 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.6-flash}
       # Credenciais padrão de acesso (e-mail e senha)
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
-      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-}
-      - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-}
-      # Diretório de persistência do banco local
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-carlos.admin@drogaria.com.br}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-SenhaForte@2026}
+      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-joao.silva@drogaria.com.br}
+      - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-SenhaForte@2026}
+      # Diretório de persistência do banco local (D1 SQLite Engine)
       - DATABASE_DIR=/app/data
     volumes:
       - d1_sqlite_data:/app/data
     healthcheck:
-      test: [ "CMD", "node", "-e", "fetch('http://localhost:4000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))" ]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 3
       start_period: 5s
     networks:
-      - apoio-network
+      - internal_network
+      - shared_network
 
-  # 2. Frontend Web (React 18 + Vite + Tailwind + Nginx)
+  # 2. Frontend Web (React 18 + Vite + Nginx Alpine)
   frontend:
     build:
       context: .
@@ -43,18 +44,25 @@ services:
     container_name: contador-apoio-frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "${FRONTEND_PORT:-3000}:80"
     depends_on:
       backend:
         condition: service_healthy
     networks:
-      - apoio-network
+      - internal_network
+      - shared_network
 
 volumes:
   d1_sqlite_data:
     name: contador_apoio_d1_data
 
 networks:
-  apoio-network:
-    name: contador_apoio_network
+  # Rede privada interna para comunicação direta entre serviços da aplicação
+  internal_network:
+    name: contador_apoio_internal
     driver: bridge
+
+  # Rede Docker compartilhada com outros contêineres e o Proxy Nginx central
+  shared_network:
+    name: ${DOCKER_SHARED_NETWORK:-shared-network}
+    external: true
