@@ -21,12 +21,28 @@ interface UserRow {
 function getDefaultCredentials() {
   return {
     admin: {
-      email: (process.env.ADMIN_EMAIL || process.env.DEFAULT_ADMIN_EMAIL || 'carlos.admin@drogaria.com.br').trim().toLowerCase(),
-      password: process.env.ADMIN_PASSWORD || process.env.DEFAULT_ADMIN_PASSWORD || 'SenhaForte@2026',
+      email: (
+        process.env.APP_ADMIN_MAIL ||
+        process.env.ADMIN_EMAIL ||
+        process.env.DEFAULT_ADMIN_EMAIL ||
+        'admin@admin.com.br'
+      ).trim().toLowerCase(),
+      password:
+        process.env.APP_ADMIN_PASS ||
+        process.env.ADMIN_PASSWORD ||
+        process.env.DEFAULT_ADMIN_PASSWORD ||
+        'admin@admin',
     },
     atendente: {
-      email: (process.env.ATENDENTE_EMAIL || process.env.DEFAULT_ATENDENTE_EMAIL || 'joao.silva@drogaria.com.br').trim().toLowerCase(),
-      password: process.env.ATENDENTE_PASSWORD || process.env.DEFAULT_ATENDENTE_PASSWORD || 'SenhaForte@2026',
+      email: (
+        process.env.ATENDENTE_EMAIL ||
+        process.env.DEFAULT_ATENDENTE_EMAIL ||
+        'joao.silva@drogaria.com.br'
+      ).trim().toLowerCase(),
+      password:
+        process.env.ATENDENTE_PASSWORD ||
+        process.env.DEFAULT_ATENDENTE_PASSWORD ||
+        'SenhaForte@2026',
     },
   };
 }

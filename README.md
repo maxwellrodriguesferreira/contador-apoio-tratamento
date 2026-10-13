@@ -79,15 +79,15 @@ cp .env.example .env
 | `DOCKER_SHARED_NETWORK` | Nome da rede docker externa compartilhada com o Nginx Proxy | `shared-network` |
 | `FRONTEND_PORT` | Porta de mapeamento do Frontend no host (opcional) | `3000` |
 | `BACKEND_PORT` | Porta de mapeamento do Backend no host (opcional) | `4000` |
-| `CLOUDFLARE_ACCOUNT_ID` | Account ID da Cloudflare (opcional em modo local) | `ex: 9a8b7c6d...` |
-| `CLOUDFLARE_DATABASE_ID` | Database ID do Cloudflare D1 | `ex: 1234-abcd-...` |
-| `CLOUDFLARE_API_TOKEN` | API Token da Cloudflare com permissão D1 Edit | `Bearer token` |
-| `GEMINI_API_KEY` | Chave da Google Gemini API (Google AI Studio) | `AIzaSy...` |
+| `CLOUDFLARE_ACCOUNT_ID` / `CF_ACCOUNT_ID` | Account ID da Cloudflare (opcional em modo local) | `ID da conta Cloudflare` |
+| `CLOUDFLARE_DATABASE_ID` / `CF_D1_DB_ID` | Database ID do Cloudflare D1 | `UUID do banco D1` |
+| `CLOUDFLARE_API_TOKEN` / `CF_D1_TOKEN` | API Token da Cloudflare com permissão D1 Edit | `Token gerado no painel` |
+| `GEMINI_API_KEY` | Chave da Google Gemini API (Google AI Studio) | `Chave obtida no AI Studio` |
 | `GEMINI_DEFAULT_MODEL` | Modelo padrão de IA | `gemini-3.6-flash` |
-| `ADMIN_EMAIL` | E-mail de login do Administrador | `carlos.admin@drogaria.com.br` |
-| `ADMIN_PASSWORD` | Senha de login do Administrador | `SenhaForte@2026` |
-| `ATENDENTE_EMAIL` | E-mail de login do Atendente | `joao.silva@drogaria.com.br` |
-| `ATENDENTE_PASSWORD` | Senha de login do Atendente | `SenhaForte@2026` |
+| `ADMIN_EMAIL` / `APP_ADMIN_MAIL` | E-mail de login do Administrador | `admin@suaempresa.com.br` |
+| `ADMIN_PASSWORD` / `APP_ADMIN_PASS` | Senha de login do Administrador | `Definir senha segura no .env` |
+| `ATENDENTE_EMAIL` | E-mail de login do Atendente | `atendente@suaempresa.com.br` |
+| `ATENDENTE_PASSWORD` | Senha de login do Atendente | `Definir senha segura no .env` |
 
 ---
 
@@ -149,17 +149,19 @@ docker compose down
 
 ---
 
-## 6. Credenciais Padrão de Acesso (E-mail e Senha)
-
-* **Administrador Geral (ADMIN)**:
-  * **E-mail**: `carlos.admin@drogaria.com.br` (ou configurado em `ADMIN_EMAIL`)
-  * **Senha**: `SenhaForte@2026` (ou configurada em `ADMIN_PASSWORD`)
-  * **Permissões**: Acesso irrestrito a todas as áreas, registros, metas, IA e configurações.
-
-* **Atendente Farmacêutico (ATENDENTE)**:
-  * **E-mail**: `joao.silva@drogaria.com.br` (ou configurado em `ATENDENTE_EMAIL`)
-  * **Senha**: `SenhaForte@2026` (ou configurada em `ATENDENTE_PASSWORD`)
-  * **Permissões**: Acesso exclusivo em modo somente leitura ao Dashboard e Meu Perfil.
+## 6. Autenticação e Perfis de Acesso
+ 
+ As credenciais de acesso padrão são definidas e gerenciadas com segurança através das variáveis de ambiente no arquivo `.env` (ou injetadas em tempo de execução no contêiner):
+ 
+ * **Administrador Geral (ADMIN)**:
+   * **E-mail**: Definido via `APP_ADMIN_MAIL` ou `ADMIN_EMAIL` no `.env`
+   * **Senha**: Definida via `APP_ADMIN_PASS` ou `ADMIN_PASSWORD` no `.env`
+   * **Permissões**: Acesso irrestrito a todas as áreas operacionais, registros clínicos, gestão de metas, auditoria imutável, análises por IA e controle de usuários.
+ 
+ * **Atendente Farmacêutico (ATENDENTE)**:
+   * **E-mail**: Definido via `ATENDENTE_EMAIL` no `.env`
+   * **Senha**: Definida via `ATENDENTE_PASSWORD` no `.env`
+   * **Permissões**: Acesso exclusivo em modo somente leitura aos seus indicadores no Dashboard e ao Meu Perfil.
 
 ---
 

@@ -18,9 +18,13 @@ export class D1DatabaseClient {
 
   private static get cloudflareConfig() {
     return {
-      accountId: process.env.CLOUDFLARE_ACCOUNT_ID || '',
-      databaseId: process.env.CLOUDFLARE_D1_DATABASE_ID || process.env.CLOUDFLARE_DATABASE_ID || '',
-      apiToken: process.env.CLOUDFLARE_API_TOKEN || '',
+      accountId: process.env.CLOUDFLARE_ACCOUNT_ID || process.env.CF_ACCOUNT_ID || '',
+      databaseId:
+        process.env.CLOUDFLARE_D1_DATABASE_ID ||
+        process.env.CLOUDFLARE_DATABASE_ID ||
+        process.env.CF_D1_DB_ID ||
+        '',
+      apiToken: process.env.CLOUDFLARE_API_TOKEN || process.env.CF_D1_TOKEN || '',
     };
   }
 
