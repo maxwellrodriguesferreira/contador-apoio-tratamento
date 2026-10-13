@@ -1,5 +1,7 @@
 node_modules
+**/node_modules
 dist
+**/dist
 .git
 .gitignore
 .npm
@@ -9,3 +11,4 @@ dist
 .env.*
 !.env.example
 data
+**/data

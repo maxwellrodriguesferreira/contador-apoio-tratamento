@@ -1,5 +1,8 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { D1DatabaseClient } from './db/d1Client.js';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
@@ -11,12 +14,25 @@ import auditRouter from './routes/audit.js';
 import settingsRouter from './routes/settings.js';
 import aiRouter from './routes/ai.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3000;
+
+// Headers de segurança HTTP
+app.use((_req, res, next) => {
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
 
 // Middlewares
 app.use(cors());
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // Logging de requisições simplificado
 app.use((req, _res, next) => {
@@ -36,10 +52,53 @@ app.use('/api/audit', auditRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/ai', aiRouter);
 
-// Rota 404 padrão
+// Rota 404 padrão para requisições na API
 app.use('/api/*', (_req, res) => {
   res.status(404).json({ error: 'Endpoint não encontrado na API do Cloudflare D1.' });
 });
+
+// Servir arquivos estáticos do frontend (Single Container)
+const potentialClientPaths = [
+  process.env.CLIENT_BUILD_PATH,
+  path.resolve(__dirname, '../client'),
+  path.resolve(__dirname, '../../dist'),
+  path.resolve(process.cwd(), 'client'),
+  path.resolve(process.cwd(), 'dist'),
+].filter(Boolean) as string[];
+
+const clientDistPath = potentialClientPaths.find((p) => fs.existsSync(p));
+
+if (clientDistPath) {
+  // Cache de 1 ano para assets estáticos com hash gerados pelo Vite
+  const assetsDir = path.join(clientDistPath, 'assets');
+  if (fs.existsSync(assetsDir)) {
+    app.use('/assets', express.static(assetsDir, {
+      maxAge: '1y',
+      immutable: true,
+    }));
+  }
+
+  // Demais arquivos estáticos da raiz do client (favicon, manifest, etc.)
+  app.use(express.static(clientDistPath, {
+    maxAge: '1h',
+  }));
+
+  // Fallback Single Page Application (SPA) para qualquer rota client-side
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+} else {
+  // Caso o frontend não esteja presente (modo API isolada)
+  app.get('/', (_req, res) => {
+    res.json({
+      message: 'Apoio ao Tratamento — API Backend ativa',
+      health: '/api/health',
+    });
+  });
+}
 
 // Inicialização do servidor
 async function startServer() {
@@ -47,10 +106,15 @@ async function startServer() {
     await D1DatabaseClient.initDatabase();
     app.listen(PORT, () => {
       console.log(`=======================================================`);
-      console.log(`🚀 Apoio ao Tratamento — Backend API`);
+      console.log(`🚀 Apoio ao Tratamento — Contêiner Unificado`);
       console.log(`🌐 Servidor ativo na porta: ${PORT}`);
       console.log(`💾 Banco de Dados: Cloudflare D1 (${D1DatabaseClient.isCloudflareRemote ? 'Remoto Edge' : 'Local SQLite Engine'})`);
       console.log(`🤖 Gemini API Key: ${process.env.GEMINI_API_KEY ? 'Configurada via ENV' : 'Aguardando configuração'}`);
+      if (clientDistPath) {
+        console.log(`📦 Frontend SPA: Integrado (${clientDistPath})`);
+      } else {
+        console.log(`⚠️  Frontend SPA: Não localizado (Modo apenas API)`);
+      }
       console.log(`=======================================================`);
     });
   } catch (error) {

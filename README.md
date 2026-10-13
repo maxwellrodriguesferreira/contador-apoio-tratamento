@@ -29,7 +29,7 @@ Um **Apoio ao Tratamento** representa a orientação e inclusão de um paciente 
 
 ---
 
-## 2. Arquitetura e Stack Tecnológica
+## 2. Arquitetura e Stack Tecnológica (Single Container)
 
 ```text
                            INTERNET / NAVEGADOR
@@ -40,36 +40,36 @@ Um **Apoio ao Tratamento** representa a orientação e inclusão de um paciente 
                     │   (Ex: Nginx Proxy Manager)   │
                     │    Rede: shared-network       │
                     └───────────────┬───────────────┘
-                                    │
-                                    ▼ (http://contador-apoio-frontend:80)
-                    ┌───────────────────────────────┐
-                    │     FRONTEND (Nginx Alpine)   │
-                    │   React 18 • Vite • Tailwind  │
-                    └───────────────┬───────────────┘
-                                    │ (Proxy reverso interno /api/*)
-                                    ▼ (http://contador-apoio-backend:4000)
-                    ┌───────────────────────────────┐
-                    │     BACKEND (Node.js 24 TS)   │
-                    │       Express API REST        │
-                    │  Docker Hub: apoio-tratamento │
-                    └───────────────┬───────────────┘
-                                    │
-                    ┌───────────────┴───────────────┐
-                    │                               │
-                    ▼                               ▼
-       CLOUDFLARE D1 (Edge SQL)             GOOGLE GEMINI API
-    Dual Engine: Remote REST / Local       (gemini-3.6-flash)
+                                    │ (http://contador-apoio-app:3000)
+                                    ▼
+                    ┌───────────────────────────────────────────────┐
+                    │   CONTÊINER UNIFICADO (Node.js 24 Alpine)     │
+                    │   Imagem: apoio-tratamento:latest             │
+                    │   Porta: 3000                                 │
+                    │                                               │
+                    │  ┌─────────────────┐   ┌───────────────────┐  │
+                    │  │  FRONTEND (SPA) │   │  BACKEND (API)    │  │
+                    │  │  React 18 Vite  │   │  Express REST     │  │
+                    │  │  Tailwind CSS   │   │  Rotas: /api/*    │  │
+                    │  └─────────────────┘   └─────────┬─────────┘  │
+                    └──────────────────────────────────┼────────────┘
+                                                       │
+                                    ┌──────────────────┴──────────────────┐
+                                    │                                     │
+                                    ▼                                     ▼
+                       CLOUDFLARE D1 (Edge SQL)                   GOOGLE GEMINI API
+                    Dual Engine: Remote REST / Local              (gemini-3.6-flash)
 ```
 
 ### Tecnologias Utilizadas:
-* **Frontend Web**: React 18, TypeScript, Vite, Tailwind CSS, Recharts (gráficos), Lucide Icons, Material Symbols, Zod (validação de schemas), XLSX (exportação Excel), Nginx Alpine.
-* **Backend API**: Node.js 24, TypeScript, Express, CORS, Driver Dual Cloudflare D1 / SQLite nativo (`node:sqlite`).
+* **Frontend Web**: React 18, TypeScript, Vite, Tailwind CSS, Recharts (gráficos), Lucide Icons, Material Symbols, Zod (validação de schemas), XLSX (exportação Excel).
+* **Backend Integrado**: Node.js 24, TypeScript, Express (servindo SPA e API unificados), CORS, Driver Dual Cloudflare D1 / SQLite nativo (`node:sqlite`).
 * **Banco de Dados (Cloudflare D1)**:
   * Motor relacional SQL com integridade ACID, chaves estrangeiras, concorrência otimista (`version`) e trilha de auditoria (`old_value` / `new_value`).
   * **Dual Engine**: Conexão transparente via **Cloudflare D1 REST API** (produção na nuvem) ou **SQLite nativo** com volume persistente (`contador_apoio_d1_data`) em ambiente local/offline.
   * Tabelas: `user_profiles`, `attendants`, `treatment_supports`, `treatment_support_audits`, `goals`, `ai_analyses`, `audit_logs`, `system_settings`.
 * **Inteligência Artificial**: Google Gemini (`gemini-3.6-flash`), com prompts clínicos em PT-BR, chave de API protegida exclusivamente no backend e cache determinístico no banco por hash (`input_hash`).
-* **Conteinerização**: Docker Multi-stage Builds, Docker Compose, rede compartilhada externa (`shared_network`) e rede interna isolada (`internal_network`).
+* **Conteinerização Unificada**: Docker Multi-stage Build em único contêiner, Docker Compose, rede compartilhada externa (`shared_network`) e volume de dados persistente (`d1_sqlite_data`).
 
 ---
 
@@ -87,8 +87,8 @@ cp .env.example .env
 | Variável | Obrigatória? | Descrição | Exemplo / Padrão |
 | :--- | :---: | :--- | :--- |
 | `DOCKER_SHARED_NETWORK` | Não | Nome da rede Docker compartilhada com o proxy Nginx | `shared-network` |
-| `FRONTEND_PORT` | Não | Porta de exposição do Frontend no host | `3000` |
-| `BACKEND_PORT` | Não | Porta de exposição da API Backend no host | `4000` |
+| `APP_PORT` | Não | Porta de exposição da aplicação no host | `3000` |
+| `PORT` | Não | Porta interna do servidor no contêiner | `3000` |
 | `CLOUDFLARE_ACCOUNT_ID` | Produção | Account ID da conta no painel Cloudflare | `ef579acea...` |
 | `CLOUDFLARE_DATABASE_ID` | Produção | UUID do banco D1 criado na Cloudflare | `9e9cb6e6-...` |
 | `CLOUDFLARE_API_TOKEN` | Produção | Token de API com permissão *D1 Edit* | `cfut_...` |
@@ -99,7 +99,7 @@ cp .env.example .env
 | `ATENDENTE_EMAIL` | Não | E-mail de login do Atendente padrão | `atendente@suaempresa.com.br` |
 | `ATENDENTE_PASSWORD` | Não | Senha de acesso do Atendente padrão | `Definida no .env` |
 
-> 💡 **Nota sobre o Banco de Dados**: Se as variáveis `CLOUDFLARE_*` forem omitidas, o backend entra automaticamente em modo **Local Engine**, mantendo todos os dados salvos no volume SQLite persistente do Docker.
+> 💡 **Nota sobre o Banco de Dados**: Se as variáveis `CLOUDFLARE_*` forem omitidas, a aplicação entra automaticamente em modo **Local Engine**, mantendo todos os dados salvos no volume SQLite persistente do Docker (`/app/data`).
 
 ---
 
@@ -110,21 +110,20 @@ cp .env.example .env
 docker network create shared-network 2>/dev/null || true
 ```
 
-### 4.2. Construir imagens e iniciar contêineres:
+### 4.2. Construir imagem e iniciar o contêiner único:
 ```bash
 docker compose up -d --build
 ```
 
-### 4.3. Verificar saúde dos contêineres:
+### 4.3. Verificar saúde do contêiner:
 ```bash
 docker compose ps
 ```
 
 Saída esperada:
 ```text
-NAME                      SERVICE    STATUS                    PORTS
-contador-apoio-backend    backend    Up (healthy)              0.0.0.0:4000->4000
-contador-apoio-frontend   frontend   Up                        0.0.0.0:3000->80
+NAME                  SERVICE    STATUS                    PORTS
+contador-apoio-app    app        Up (healthy)              0.0.0.0:3000->3000
 ```
 
 ### 4.4. Testar conectividade e healthcheck da API:
@@ -152,7 +151,7 @@ Resposta esperada:
 
 ## 5. Publicação no Docker Hub & Deploy em VPS
 
-O serviço backend está configurado com a imagem:
+O serviço unificado está configurado com a imagem oficial:
 ```text
 maxwellrodriguesferreira/apoio-tratamento:latest
 ```
@@ -162,8 +161,8 @@ maxwellrodriguesferreira/apoio-tratamento:latest
 # 1. Login no Docker Hub
 docker login
 
-# 2. Compilar a imagem com a tag oficial
-docker compose build backend
+# 2. Compilar a imagem unificada
+docker compose build
 
 # 3. Publicar no Docker Hub
 docker push maxwellrodriguesferreira/apoio-tratamento:latest
@@ -201,7 +200,7 @@ docker push maxwellrodriguesferreira/apoio-tratamento:latest
    docker network create shared-network 2>/dev/null || true
    ```
 
-6. **Baixe as imagens e inicialize os serviços**:
+6. **Baixe a imagem unificada e inicialize o contêiner**:
    ```bash
    docker compose pull
    docker compose up -d
@@ -211,22 +210,26 @@ docker push maxwellrodriguesferreira/apoio-tratamento:latest
 
 ## 6. Integração com Nginx Central / Nginx Proxy Manager
 
-Se você utiliza um proxy central compartilhado (ex: Nginx tradicional, Traefik ou Nginx Proxy Manager) na VPS:
+Como a aplicação agora roda em um **único contêiner**, a configuração no Nginx Proxy Manager (NPM) ou proxy reverso na VPS ficou extremamente simples:
 
-1. Conecte o container do Nginx Proxy à mesma rede `shared-network`.
-2. Configure o Upstream apontando para o container frontend:
-   * **Host / Upstream**: `contador-apoio-frontend`
-   * **Porta**: `80`
-   * **Esquema**: `http`
+### 6.1. No Nginx Proxy Manager (Interface Gráfica):
+1. **Details**:
+   * **Domain Names**: `apoio.suadrogaria.com.br`
+   * **Scheme**: `http`
+   * **Forward Hostname / IP**: `contador-apoio-app`
+   * **Forward Port**: `3000`
+   * Marque: **Block Common Exploits** e **Websockets Support**.
+2. **SSL**:
+   * Solicite ou selecione seu certificado SSL Let's Encrypt gratuito e marque **Force SSL** e **HTTP/2 Support**.
 
-### Exemplo de bloco Nginx:
+### 6.2. Exemplo para Nginx Tradicional:
 ```nginx
 server {
     listen 80;
     server_name apoio.suadrogaria.com.br;
 
     location / {
-        proxy_pass http://contador-apoio-frontend:80;
+        proxy_pass http://contador-apoio-app:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -237,7 +240,6 @@ server {
     }
 }
 ```
-*(O container `contador-apoio-frontend` já inclui o proxy interno para `/api/*` apontando para o backend).*
 
 ---
 

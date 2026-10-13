@@ -10,25 +10,24 @@ O sistema **Apoio ao Tratamento** foi refatorado e desenhado seguindo padrões c
 
 ```mermaid
 flowchart TD
-    User([Usuário no Navegador]) -->|HTTP / Porta 3000| Nginx[Frontend: Nginx Alpine Contêiner]
-    
-    subgraph Frontend Container
-        Nginx -->|SPA Static Files| ReactApp[React 18 + Vite + Tailwind CSS]
-        Nginx -->|Proxy Reverso /api/*| BackendAPI
-    end
+    User([Usuário no Navegador]) -->|HTTP: Porta 3000 ou HTTPS Proxy Central| AppContainer
 
-    subgraph Backend Container
-        BackendAPI[Node.js + Express REST API / Porta 4000]
-        BackendAPI -->|Dual Engine D1 Client| D1Driver{Cloudflare Configurada?}
+    subgraph AppContainer [Contêiner Único: contador-apoio-app / Porta 3000]
+        Server[Servidor Integrado Express / Node.js 24 Alpine]
+        
+        Server -->|SPA Static Files /assets/| ReactApp[Frontend: React 18 + Vite + Tailwind CSS]
+        Server -->|API REST /api/*| APIRoutes[Rotas da API: Auth, Apoios, Metas, Auditoria, IA]
+        
+        APIRoutes -->|Dual Engine D1 Client| D1Driver{Cloudflare Configurada?}
         D1Driver -->|Sim: HTTP REST API| CloudflareD1[(Cloudflare D1 Edge SQL)]
         D1Driver -->|Não: node:sqlite Local| SQLiteFile[(Volume Persistente: /app/data)]
         
-        BackendAPI -->|GEMINI_API_KEY Segura| GeminiAPI[Google Gemini 3.6 Flash]
+        APIRoutes -->|GEMINI_API_KEY Segura| GeminiAPI[Google Gemini 3.6 Flash]
     end
 
     subgraph Segurança e Governança
-        BackendAPI -->|RBAC 403 Forbidden| RBACPolicy[ADMIN vs ATENDENTE]
-        BackendAPI -->|Auditoria Imutável| AuditDB[(Tabelas: audit_logs & treatment_support_audits)]
+        APIRoutes -->|RBAC 403 Forbidden| RBACPolicy[ADMIN vs ATENDENTE]
+        APIRoutes -->|Auditoria Imutável| AuditDB[(Tabelas: audit_logs & treatment_support_audits)]
     end
 ```
 
@@ -76,8 +75,9 @@ O **Cloudflare D1** opera sob o motor relacional SQLite com conformidade ACID e 
 
 ---
 
-## 6. Conteinerização com Docker e Docker Compose
+## 6. Conteinerização com Docker e Docker Compose (Single Container)
 
-* **Frontend**: Multi-stage build com Node.js 24 Alpine para compilação Vite e Nginx Alpine com proxy reverso e SPA routing.
-* **Backend**: Multi-stage build com Node.js 24 Alpine, TypeScript, driver dual Cloudflare D1 e execução com usuário não-root `node`.
-* **Healthcheck**: O frontend aguarda a prontidão do backend (`service_healthy`) através do endpoint `/api/health`.
+* **Multi-Stage Build**: O `Dockerfile` unificado compila os artefatos estáticos do Frontend (React + Vite) no Estágio 1, compila o código TypeScript do Backend no Estágio 2 e gera uma imagem de runtime enxuta baseada em `node:24-alpine` no Estágio 3.
+* **Execução Não-Root**: O contêiner opera com o usuário seguro nativo `node`, preservando permissões estritas no volume persistente `/app/data`.
+* **Healthcheck Integrado**: O healthcheck utiliza o `fetch` nativo do Node 24 para verificar periodicamente a disponibilidade do endpoint `/api/health` sem depender de pacotes externos como `curl`.
+* **Zero Overhead**: Elimina a necessidade de redes internas inter-contêineres, orquestração de dependências (`depends_on`), proxies duplicados e conflitos de portas na VPS.
