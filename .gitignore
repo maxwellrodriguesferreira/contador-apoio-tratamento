@@ -36,3 +36,7 @@ server/dist/
 
 # TypeScript cache
 *.tsbuildinfo
+
+# Documentos PDF locais
+*.pdf
+
