@@ -2,7 +2,13 @@
 
 Sistema corporativo de alto desempenho projetado para drogarias e redes farmacêuticas para registro, acompanhamento terapêutico, auditoria imutável, cálculo determinístico de metas e análise preditiva por Inteligência Artificial (Google Gemini) de **Apoios ao Tratamento**.
 
-Construído com arquitetura desacoplada e conteinerizada via **Docker & Docker Compose**, suporte nativo ao banco de dados relacional **Cloudflare D1** (Edge SQL), integração a **redes Docker compartilhadas** com proxy reverso Nginx central e publicação de imagens no **Docker Hub**.
+Construído com arquitetura moderna e conteinerizada em **Contêiner Único (*Single Container*)** via **Docker & Docker Compose**, suporte nativo ao banco de dados relacional **Cloudflare D1** (Edge SQL), integração à rede Docker compartilhada **`rede-proxy`** com **Nginx Proxy Manager** e publicação de imagens no **Docker Hub**.
+
+---
+
+> 📖 **Guia Completo de Deploy na VPS**:
+> Para o passo a passo detalhado da instalação do Nginx Proxy Manager, configuração de DNS na Hostinger e emissão de certificados SSL gratuitos (Let's Encrypt), consulte o manual dedicado:
+> 👉 **[MANUAL_DEPLOY_VPS_NPM.md](MANUAL_DEPLOY_VPS_NPM.md)** *(ou o PDF complementar `MANUAL_DEPLOY_VPS_NPM.pdf`)*.
 
 ---
 
@@ -12,7 +18,7 @@ Um **Apoio ao Tratamento** representa a orientação e inclusão de um paciente 
 
 ### Separação Rigorosa de Papéis (RBAC):
 ```text
-  ADMINISTRADOR (Carlos / Maxwell)
+  ADMINISTRADOR (Acesso Total)
         │
         │ Registra, edita, exclui ou restaura apoios
         ▼
@@ -24,52 +30,56 @@ Um **Apoio ao Tratamento** representa a orientação e inclusão de um paciente 
 ```
 
 * **USUÁRIO DO SISTEMA ≠ ATENDENTE**:
-  * **ADMIN**: Único perfil autorizado a lançar, alterar, auditar e excluir apoios, além de configurar metas operacionais, gerenciar usuários e executar diagnósticos por IA.
+  * **ADMIN**: Perfil com privilégio total para lançar, alterar, auditar e excluir apoios, além de configurar metas operacionais, gerenciar usuários, visualizar auditoria e executar diagnósticos por IA.
   * **ATENDENTE**: Acesso restrito em modo **leitura** aos seus indicadores individuais no Dashboard e ao seu perfil.
 
 ---
 
-## 2. Arquitetura e Stack Tecnológica (Single Container)
+## 2. Arquitetura Técnica e Stack Tecnológica (Single Container)
+
+A aplicação foi refatorada e unificada em um **único contêiner**, eliminando a necessidade de contêineres separados para frontend e backend, reduzindo o consumo de memória RAM na VPS e simplificando drasticamente a orquestração de rede.
 
 ```text
-                           INTERNET / NAVEGADOR
-                                    │
-                                    ▼
-                    ┌───────────────────────────────┐
-                    │   NGINX PROXY CENTRAL (Host)  │
-                    │   (Ex: Nginx Proxy Manager)   │
-                    │    Rede: shared-network       │
-                    └───────────────┬───────────────┘
-                                    │ (http://contador-apoio-app:3000)
-                                    ▼
-                    ┌───────────────────────────────────────────────┐
-                    │   CONTÊINER UNIFICADO (Node.js 24 Alpine)     │
-                    │   Imagem: apoio-tratamento:latest             │
-                    │   Porta: 3000                                 │
-                    │                                               │
-                    │  ┌─────────────────┐   ┌───────────────────┐  │
-                    │  │  FRONTEND (SPA) │   │  BACKEND (API)    │  │
-                    │  │  React 18 Vite  │   │  Express REST     │  │
-                    │  │  Tailwind CSS   │   │  Rotas: /api/*    │  │
-                    │  └─────────────────┘   └─────────┬─────────┘  │
-                    └──────────────────────────────────┼────────────┘
-                                                       │
-                                    ┌──────────────────┴──────────────────┐
-                                    │                                     │
-                                    ▼                                     ▼
-                       CLOUDFLARE D1 (Edge SQL)                   GOOGLE GEMINI API
-                    Dual Engine: Remote REST / Local              (gemini-3.6-flash)
+                           INTERNET PÚBLICA / NAVEGADOR
+                                        │
+                                        ▼
+                        ┌───────────────────────────────┐
+                        │   NGINX PROXY MANAGER (Host)  │
+                        │   (Portas 80 / 443 com SSL)   │
+                        │        Rede: rede-proxy       │
+                        └───────────────┬───────────────┘
+                                        │ (http://contador-apoio-app:3000)
+                                        ▼
+       ╔═════════════════════════════════════════════════════════════════════╗
+       ║             CONTÊINER UNIFICADO: contador-apoio-app                 ║
+       ║                    (Node.js 24 Alpine / Porta 3000)                 ║
+       ║                                                                     ║
+       ║  ┌─────────────────────────┐       ┌─────────────────────────────┐  ║
+       ║  │      FRONTEND (SPA)     │       │        BACKEND (API)        │  ║
+       ║  │  • React 18 + Vite      │◄──────┤  • Express 4.x REST         │  ║
+       ║  │  • Tailwind CSS         │Static │  • Rotas: /api/*            │  ║
+       ║  │  • Cache de Assets (1y) │ Files │  • Headers de Segurança     │  ║
+       ║  │  • Roteamento SPA       │       │  • CORS & Body Parser 25MB  │  ║
+       ║  └─────────────────────────┘       └──────────────┬──────────────┘  ║
+       ╚════════════════════════════════════════════════════┼═════════════════╝
+                                                           │
+                                        ┌──────────────────┴──────────────────┐
+                                        │                                     │
+                                        ▼                                     ▼
+                           CLOUDFLARE D1 (Edge SQL)                   GOOGLE GEMINI API
+                        Dual Engine: Remote REST / Local              (gemini-3.6-flash)
 ```
 
 ### Tecnologias Utilizadas:
-* **Frontend Web**: React 18, TypeScript, Vite, Tailwind CSS, Recharts (gráficos), Lucide Icons, Material Symbols, Zod (validação de schemas), XLSX (exportação Excel).
-* **Backend Integrado**: Node.js 24, TypeScript, Express (servindo SPA e API unificados), CORS, Driver Dual Cloudflare D1 / SQLite nativo (`node:sqlite`).
-* **Banco de Dados (Cloudflare D1)**:
-  * Motor relacional SQL com integridade ACID, chaves estrangeiras, concorrência otimista (`version`) e trilha de auditoria (`old_value` / `new_value`).
-  * **Dual Engine**: Conexão transparente via **Cloudflare D1 REST API** (produção na nuvem) ou **SQLite nativo** com volume persistente (`contador_apoio_d1_data`) em ambiente local/offline.
+* **Frontend Web**: React 18, TypeScript, Vite, Tailwind CSS, Recharts (gráficos interativos), Lucide Icons, Material Symbols, Zod (validação de schemas), XLSX (exportação Excel).
+* **Backend Integrado**: Node.js 24 Alpine, TypeScript, Express (servindo tanto os artefatos estáticos da SPA quanto os endpoints da API REST sob `/api/*`), CORS, Driver Dual Cloudflare D1 / SQLite nativo (`node:sqlite`).
+* **Banco de Dados (Cloudflare D1 Dual Engine)**:
+  * Motor relacional SQL com integridade ACID, chaves estrangeiras, concorrência otimista (`version`) e trilha de auditoria completa (`old_value` / `new_value`).
+  * **Modo Nuvem (Produção)**: Conexão direta via **Cloudflare D1 REST API** na borda (*Edge*).
+  * **Modo Local (Offline/Fallback)**: Engine nativa baseada em `node:sqlite` com volume persistente (`contador_apoio_d1_data`) em `/app/data`.
   * Tabelas: `user_profiles`, `attendants`, `treatment_supports`, `treatment_support_audits`, `goals`, `ai_analyses`, `audit_logs`, `system_settings`.
-* **Inteligência Artificial**: Google Gemini (`gemini-3.6-flash`), com prompts clínicos em PT-BR, chave de API protegida exclusivamente no backend e cache determinístico no banco por hash (`input_hash`).
-* **Conteinerização Unificada**: Docker Multi-stage Build em único contêiner, Docker Compose, rede compartilhada externa (`shared_network`) e volume de dados persistente (`d1_sqlite_data`).
+* **Inteligência Artificial (Google Gemini)**: Modelo `gemini-3.6-flash`, com parecer executivo, termômetro clínico, plano de voo operacional e cache determinístico por hash (`input_hash`).
+* **Conteinerização**: Docker Multi-stage Build em 3 estágios, Docker Compose, rede externa `rede-proxy` e execução segura com usuário não-root `node`.
 
 ---
 
@@ -86,8 +96,8 @@ cp .env.example .env
 
 | Variável | Obrigatória? | Descrição | Exemplo / Padrão |
 | :--- | :---: | :--- | :--- |
-| `DOCKER_SHARED_NETWORK` | Não | Nome da rede Docker compartilhada com o proxy Nginx | `shared-network` |
-| `APP_PORT` | Não | Porta de exposição da aplicação no host | `3000` |
+| `DOCKER_SHARED_NETWORK` | Não | Nome da rede Docker compartilhada com o proxy Nginx | `rede-proxy` |
+| `APP_PORT` | Não | Porta de exposição da aplicação no host (se necessário) | `3000` |
 | `PORT` | Não | Porta interna do servidor no contêiner | `3000` |
 | `CLOUDFLARE_ACCOUNT_ID` | Produção | Account ID da conta no painel Cloudflare | `ef579acea...` |
 | `CLOUDFLARE_DATABASE_ID` | Produção | UUID do banco D1 criado na Cloudflare | `9e9cb6e6-...` |
@@ -107,7 +117,7 @@ cp .env.example .env
 
 ### 4.1. Garantir que a rede compartilhada existe no host:
 ```bash
-docker network create shared-network 2>/dev/null || true
+docker network create rede-proxy 2>/dev/null || true
 ```
 
 ### 4.2. Construir imagem e iniciar o contêiner único:
@@ -197,7 +207,7 @@ docker push maxwellrodriguesferreira/apoio-tratamento:latest
 
 5. **Garanta a existência da rede Docker compartilhada**:
    ```bash
-   docker network create shared-network 2>/dev/null || true
+   docker network create rede-proxy 2>/dev/null || true
    ```
 
 6. **Baixe a imagem unificada e inicialize o contêiner**:
@@ -208,21 +218,23 @@ docker push maxwellrodriguesferreira/apoio-tratamento:latest
 
 ---
 
-## 6. Integração com Nginx Central / Nginx Proxy Manager
+## 6. Integração com Nginx Proxy Manager & Hostinger DNS
 
-Como a aplicação agora roda em um **único contêiner**, a configuração no Nginx Proxy Manager (NPM) ou proxy reverso na VPS ficou extremamente simples:
+Com o contêiner unificado conectado à rede **`rede-proxy`**, o Nginx Proxy Manager (NPM) roteia o tráfego de forma direta e sem expor portas extras:
 
-### 6.1. No Nginx Proxy Manager (Interface Gráfica):
-1. **Details**:
-   * **Domain Names**: `apoio.suadrogaria.com.br`
+### 6.1. Configuração no Painel do NPM:
+1. **Aba Details**:
+   * **Domain Names**: `apoio.suadrogaria.com.br` *(apontado na Hostinger via Registro A)*
    * **Scheme**: `http`
    * **Forward Hostname / IP**: `contador-apoio-app`
    * **Forward Port**: `3000`
-   * Marque: **Block Common Exploits** e **Websockets Support**.
-2. **SSL**:
-   * Solicite ou selecione seu certificado SSL Let's Encrypt gratuito e marque **Force SSL** e **HTTP/2 Support**.
+   * Marque: **Block Common Exploits**, **Websockets Support** e **Cache Assets**.
+2. **Aba SSL**:
+   * **SSL Certificate**: Selecione *Request a new SSL Certificate* (Let's Encrypt gratuito).
+   * Marque: **Force SSL**, **HTTP/2 Support** e aceite os termos de serviço.
+   * Clique em **Save**.
 
-### 6.2. Exemplo para Nginx Tradicional:
+### 6.2. Exemplo para Nginx Tradicional no Host:
 ```nginx
 server {
     listen 80;
@@ -261,19 +273,16 @@ npm run test
 ## 8. Comandos Úteis do Docker Compose
 
 ```bash
-# Ver logs em tempo real:
+# Ver logs em tempo real da aplicação unificada:
 docker compose logs -f
 
-# Ver logs apenas do backend:
-docker compose logs -f backend
-
-# Reiniciar a aplicação:
+# Reiniciar o contêiner:
 docker compose restart
 
 # Parar a aplicação mantendo os dados persistidos:
 docker compose down
 
-# Parar e remover volumes locais (atenção):
+# Parar e remover volumes locais (atenção: apaga dados do SQLite local):
 docker compose down -v
 ```
 
