@@ -1,7 +1,7 @@
 services:
   # 1. API Backend (Cloudflare D1 Engine & Google Gemini)
   backend:
-    image: maxwellrodriguesferreira/apoio-tratamento:latest
+    image: maxwellrodriguesferreira/apoio-tratamento-backend:latest
     build:
       context: ./server
       dockerfile: Dockerfile
@@ -34,6 +34,7 @@ services:
 
   # 2. Frontend Web (React 18 + Vite + Nginx Alpine)
   frontend:
+    image: maxwellrodriguesferreira/apoio-tratamento-frontend:latest
     build:
       context: .
       dockerfile: Dockerfile
