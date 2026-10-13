@@ -10,19 +10,16 @@ services:
       - "${BACKEND_PORT:-4000}:4000"
     environment:
       - PORT=4000
-      # Credenciais do Banco de Dados Cloudflare D1
-      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
-      - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-}
-      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
-      # Google Gemini API
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.6-flash}
-      # Credenciais padrão de acesso (e-mail e senha)
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-carlos.admin@drogaria.com.br}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-SenhaForte@2026}
-      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-joao.silva@drogaria.com.br}
-      - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-SenhaForte@2026}
-      # Diretório de persistência do banco local (D1 SQLite Engine)
+      # Repasse seguro de variáveis de ambiente (sem expor credenciais no repositório)
+      - CLOUDFLARE_ACCOUNT_ID
+      - CLOUDFLARE_DATABASE_ID
+      - CLOUDFLARE_API_TOKEN
+      - GEMINI_API_KEY
+      - GEMINI_DEFAULT_MODEL
+      - ADMIN_EMAIL
+      - ADMIN_PASSWORD
+      - ATENDENTE_EMAIL
+      - ATENDENTE_PASSWORD
       - DATABASE_DIR=/app/data
     volumes:
       - d1_sqlite_data:/app/data
