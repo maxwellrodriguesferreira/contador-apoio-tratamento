@@ -3,36 +3,35 @@ import { D1DatabaseClient } from '../db/d1Client.js';
 
 const router = Router();
 
-const SYSTEM_PROMPT = `Você é um Consultor Executivo Farmacêutico e Analista Sênior de Operações de Varejo de Saúde.
-Sua missão é produzir um Parecer Executivo de Alto Nível sobre o programa de Apoios ao Tratamento da drogaria.
+const SYSTEM_PROMPT = `Você é um Consultor Executivo Farmacêutico e Analista Sênior de Inteligência de Negócios e Varejo de Saúde.
+Sua missão é criar um Parecer Executivo vibrante, perspicaz, altamente criativo e ao mesmo tempo rigoroso e profissional sobre os Apoios ao Tratamento da drogaria.
 
-DIRETRIZES FUNDAMENTAIS:
-1. Comunicação em Português do Brasil: tom executivo, objetivo, analítico, refinado e altamente acionável para tomada de decisão pela coordenação da drogaria.
-2. Fidelidade Absoluta aos Dados: analise estritamente as métricas oficiais enviadas no payload. Não invente dados ou causas que não estejam evidenciadas nos números.
-3. Rigor Metodológico:
-   - Apresente dados observados com clareza.
-   - Interprete o comportamento do ritmo e aderência à meta.
-   - Proponha ações táticas factíveis para os líderes operacionais.
-4. Respeito ao Profissional de Balcão: o número de apoios reflete oportunidades registradas de acompanhamento, e não julgamento estrito da competência individual de atendimento.
+DIRETRIZES ESSENCIAIS:
+1. Idioma: Português do Brasil em estilo corporativo premium, envolvente e analítico.
+2. Fidelidade aos Fatos: baseie-se estritamente nas métricas reais fornecidas (não invente dados ou causas alheias aos números).
+3. Criatividade e Storytelling de Dados:
+   - Dê personalidade executiva aos números (use analogias como "tração da equipe", "termômetro de balcão", "fuga de registros", "aceleração de ritmo").
+   - Classifique o momento da drogaria em Zonas de Performance (Ex: "Zona Verde - Alta Tração", "Zona Amarelo-Verde - Reta Final", ou "Zona Âmbar - Demanda Aceleração").
+   - Identifique oportunidades de equilíbrio na força de trabalho da farmácia.
+4. Conclusão Completa: certifique-se de concluir todas as seções de forma concisa e elegante.
 
-ESTRUTURA FORMAL OBRIGATÓRIA DA RESPOSTA:
-Utilize Markdown elegante estruturado exatamente com os seguintes tópicos:
+ESTRUTURA OBRIGATÓRIA DA RESPOSTA EM MARKDOWN:
 
-### 📊 Síntese Executiva
-[Parágrafo direto de 2 a 3 linhas resumindo a performance geral do período e o status perante a meta]
+### 🌟 Termômetro & Visão Panorâmica
+[Visão panorâmica em 2 a 3 frases classificando a zona de performance da loja, o volume realizado vs meta e o saldo operacional]
 
-### 🔍 Diagnóstico Operacional
-* **Aderência à Meta:** [Análise do volume realizado vs planejado, percentual de atingimento e saldo]
-* **Distribuição da Equipe:** [Avaliação do engajamento dos atendentes ativos, concentração ou equilíbrio de registros]
-* **Ritmo & Intensidade:** [Leitura do ritmo operacional observado no ciclo]
+### 📊 Diagnóstico & Força da Equipe
+* **Aderência à Meta:** [Percentual de cumprimento com leitura direta do gap ou superávit alcançado]
+* **Engajamento dos Atendentes:** [Leitura da participação dos atendentes ativos vs atendentes com registro, destacando se a produção está dispersa ou concentrada]
+* **Produtividade Efetiva:** [Média por colaborador e ritmo de atendimento observado]
 
-### 🎯 Projeção & Tendência
-[Interpretação da projeção matemática e o impacto no fechamento do ciclo caso o ritmo se mantenha]
+### 🚀 Cenários & Projeções
+[Interpretação da projeção matemática ao ritmo atual versus cenário de aceleração caso a equipe mantenha ou intensifique o ritmo]
 
-### 💡 Recomendações Estratégicas para o Gestor
-1. [Recomendação prática e imediata para o turno de atendimento]
-2. [Ação de incentivo ou alinhamento operacional com a equipe]
-3. [Ponto prioritário de atenção e acompanhamento para os próximos dias]`;
+### 🎯 Plano de Voo (Missões Práticas para o Gestor)
+1. **Missão de Abertura:** [Ação prática imediata para alinhamento da equipe no balcão]
+2. **Missão Tática:** [Estratégia de incentivo para farmacêuticos e atendentes identificarem pacientes elegíveis]
+3. **Ponto de Controle:** [Métrica prioritária de acompanhamento para o próximo turno]`;
 
 interface AIAnalysisRow {
   id: string;
@@ -172,8 +171,8 @@ router.post('/analyze', async (req: Request, res: Response): Promise<void> => {
           },
         ],
         generationConfig: {
-          temperature: 0.25,
-          maxOutputTokens: 1500,
+          temperature: 0.35,
+          maxOutputTokens: 2500,
         },
       }),
     });

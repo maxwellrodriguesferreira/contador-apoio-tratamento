@@ -3,23 +3,19 @@ import { AIAnalysis, AIAnalysisType, DashboardMetrics, UserProfile } from '../..
 import { calculateDashboardMetrics, generateDataHash, formatDateBR } from '../../utils/calculations';
 import { AuditService } from '../audit/auditService';
 
-const SYSTEM_PROMPT = `Você é um Consultor Executivo Farmacêutico e Analista Sênior de Operações de Varejo de Saúde.
-Sua missão é produzir um Parecer Executivo de Alto Nível sobre o programa de Apoios ao Tratamento da drogaria.
+const SYSTEM_PROMPT = `Você é um Consultor Executivo Farmacêutico e Analista Sênior de Inteligência de Negócios e Varejo de Saúde.
+Sua missão é criar um Parecer Executivo vibrante, perspicaz, altamente criativo e ao mesmo tempo rigoroso e profissional sobre os Apoios ao Tratamento da drogaria.
 
-DIRETRIZES FUNDAMENTAIS:
-1. Comunicação em Português do Brasil: tom executivo, objetivo, analítico, refinado e altamente acionável.
-2. Fidelidade Absoluta aos Dados: analise estritamente as métricas oficiais enviadas.
-3. Diferencie:
-   - Fatos e Números Observados
-   - Interpretação Operacional da Equipe
-   - Recomendações Táticas para a Coordenação de Balcão.
-4. Respeito ao Profissional: o número de apoios reflete oportunidades registradas de acompanhamento, e não julgamento estrito da competência individual.
+DIRETRIZES ESSENCIAIS:
+1. Idioma: Português do Brasil em estilo corporativo premium, envolvente e analítico.
+2. Fidelidade aos Fatos: baseie-se estritamente nas métricas reais fornecidas.
+3. Criatividade e Storytelling de Dados: classifique zonas de performance, identifique força da equipe e formule cenários.
 
 ESTRUTURA FORMAL:
-### 📊 Síntese Executiva
-### 🔍 Diagnóstico Operacional
-### 🎯 Projeção & Tendência
-### 💡 Recomendações Estratégicas para o Gestor`;
+### 🌟 Termômetro & Visão Panorâmica
+### 📊 Diagnóstico & Força da Equipe
+### 🚀 Cenários & Projeções
+### 🎯 Plano de Voo (Missões Práticas para o Gestor)`;
 
 export class AIService {
   /**
@@ -313,42 +309,44 @@ export class AIService {
       const m = payload as unknown as DashboardMetrics & { data: string; totalRealizadoHoje: number; metaDiaria: number; percentualAtingido: string; diferencaMeta: string; atendentesAtivos: number; atendentesComApoioHoje: number; mediaPorAtendente: number };
       const atingiu = m.totalRealizadoHoje >= m.metaDiaria;
       const pct = parseFloat(m.percentualAtingido) || 0;
-      return `### 📊 Síntese Executiva
-No ciclo operacional de **${formatDateBR(m.data)}**, o estabelecimento registrou um total de **${m.totalRealizadoHoje} apoios ao tratamento**, atingindo **${m.percentualAtingido}** da meta diária programada (${m.metaDiaria} apoios). O saldo líquido do dia foi de **${m.diferencaMeta}** em relação ao objetivo estipulado.
+      const zona = pct >= 100 ? '🟢 Zona Verde (Superávit / Alta Tração)' : pct >= 80 ? '🟡 Zona Amarelo-Verde (Reta Final / Fuga Concentrada)' : '🟠 Zona Âmbar (Demanda Aceleração de Balcão)';
+      return `### 🌟 Termômetro & Visão Panorâmica
+A operação do dia **${formatDateBR(m.data)}** posiciona a drogaria na **${zona}**, registrando **${m.totalRealizadoHoje} de ${m.metaDiaria} apoios** (**${m.percentualAtingido}** da meta). O saldo do turno é de **${m.diferencaMeta} apoios** em relação ao objetivo corporativo.
 
-### 🔍 Diagnóstico Operacional
-* **Aderência à Meta:** Atingimento de **${m.percentualAtingido}** (${m.totalRealizadoHoje}/${m.metaDiaria}). ${atingiu ? 'A meta do dia foi cumprida com êxito.' : 'O volume ficou aquém do planejado, demandando intensificação nos próximos turnos.'}
-* **Distribuição da Equipe:** Dos **${m.atendentesAtivos}** atendentes ativos na unidade, **${m.atendentesComApoioHoje}** realizaram registros válidos no período.
-* **Ritmo Médio por Profissional:** Média de **${m.mediaPorAtendente} apoios** por colaborador ativo no dia.
+### 📊 Diagnóstico & Força da Equipe
+* **Aderência à Meta:** Cumprimento em **${m.percentualAtingido}** da meta diária. ${atingiu ? 'A demanda de balcão foi capturada com excelência.' : 'Houve tração sólida, restando um gap estreito de fechamento.'}
+* **Engajamento dos Atendentes:** De um total de **${m.atendentesAtivos}** colaboradores ativos, **${m.atendentesComApoioHoje}** registraram orientações no sistema (${Math.round((m.atendentesComApoioHoje / Math.max(m.atendentesAtivos, 1)) * 100)}% de participação ativa).
+* **Produtividade Efetiva:** Média global de **${m.mediaPorAtendente} apoios/atendente**, elevando-se para **${(m.totalRealizadoHoje / Math.max(m.atendentesComApoioHoje, 1)).toFixed(1)} apoios** entre os profissionais operantes.
 
-### 🎯 Projeção & Tendência
-* O ritmo diário aponta que a sustentação da meta exige uma média estável de **${(m.metaDiaria / Math.max(m.atendentesAtivos, 1)).toFixed(1)} apoios por atendente**.
-* No consolidado mensal, o estabelecimento acumula **${(payload.dadosGeraisMes as Record<string, unknown>)?.totalAcumuladoMes || 0} apoios**, representando **${(payload.dadosGeraisMes as Record<string, unknown>)?.percentualMensal || '0%'}** da meta mensal.
+### 🚀 Cenários & Projeções
+* **Cenário de Sustentação:** A estabilidade da meta diária requer **${(m.metaDiaria / Math.max(m.atendentesAtivos, 1)).toFixed(1)} apoios por atendente** ao longo dos turnos.
+* **Cenário Mensal Integrado:** O acumulado da unidade atinge **${(payload.dadosGeraisMes as Record<string, unknown>)?.totalAcumuladoMes || 0} apoios**, garantindo **${(payload.dadosGeraisMes as Record<string, unknown>)?.percentualMensal || '0%'}** do teto mensal programado.
 
-### 💡 Recomendações Estratégicas para o Gestor
-1. **Ativação de Balcão:** Promover alinhamento rápido no início de cada turno com os atendentes sem registros para reforçar a identificação ativa de pacientes em uso de antimicrobianos e cronogramas crônicos.
-2. **Equilíbrio Operacional:** Fomentar o compartilhamento de boas práticas entre os atendentes com maior índice de cadastros e o restante da equipe.
-3. **Monitoramento Contínuo:** Acompanhar o fechamento intermediário do meio do dia para calibrar o esforço de orientação farmacêutica da tarde.`;
+### 🎯 Plano de Voo (Missões Práticas para o Gestor)
+1. **Missão de Abertura:** Fazer checkpoint no início da escala com os atendentes sem registros para revisar abordagem em antibioticoterapia e cronogramas contínuos.
+2. **Missão Tática:** Estimular mentoria de balcão entre os atendentes de maior conversão e os demais colaboradores.
+3. **Ponto de Controle:** Acompanhar o placar no intervalo do almoço para calibrar o esforço de orientação do período vespertino.`;
     } else {
       const m = payload as unknown as { mesReferencia: string; totalRealizadoMes: number; metaMensal: number; percentualAtingido: string; volumeRestanteParaMeta: number; mediaDiariaRealizada: number; projecaoFinalMes: number; diasRestantesNoMes: number; ritmoNecessarioPorDiaRestante: number };
       const pct = parseFloat(m.percentualAtingido) || 0;
       const superouProjecao = m.projecaoFinalMes >= m.metaMensal;
-      return `### 📊 Síntese Executiva
-Consolidado analítico do mês de **${m.mesReferencia}**: foram computados **${m.totalRealizadoMes} apoios ao tratamento** frente à meta corporativa de **${m.metaMensal} apoios** (**${m.percentualAtingido}** concluído). Restam **${m.volumeRestanteParaMeta} apoios** para a integralização do objetivo no ciclo.
+      const zona = pct >= 90 ? '🟢 Zona Verde (Projeção Consolidada)' : pct >= 60 ? '🟡 Zona Azul-Verde (Ritmo Estável)' : '🟠 Zona Âmbar (Aceleração Exigida)';
+      return `### 🌟 Termômetro & Visão Panorâmica
+O fechamento consolidado de **${m.mesReferencia}** situa a unidade na **${zona}**, com **${m.totalRealizadoMes} apoios registrados** diante da meta de **${m.metaMensal} apoios** (**${m.percentualAtingido}** concluído). O volume remanescente para o ciclo é de **${m.volumeRestanteParaMeta} apoios**.
 
-### 🔍 Diagnóstico Operacional
-* **Aderência Global:** Índice de cumprimento em **${m.percentualAtingido}**, com média diária observada de **${m.mediaDiariaRealizada} apoios/dia**.
-* **Dias Úteis Restantes:** Restam **${m.diasRestantesNoMes} dias** no mês para absorção do volume remanescente.
-* **Ritmo Exigido:** Para atingir 100% da meta, a operação requer um ritmo de **${m.ritmoNecessarioPorDiaRestante} apoios/dia** nos dias restantes.
+### 📊 Diagnóstico & Força da Equipe
+* **Aderência Global:** Índice consolidado em **${m.percentualAtingido}**, com média realizada de **${m.mediaDiariaRealizada} apoios/dia**.
+* **Tempo de Reação:** Restam **${m.diasRestantesNoMes} dias operacionais** no mês para absorção do volume remanescente.
+* **Ritmo de Balcão:** O ritmo necessário nos dias restantes é de **${m.ritmoNecessarioPorDiaRestante} apoios/dia** para cumprimento de 100% da meta.
 
-### 🎯 Projeção & Tendência
-* **Projeção ao Ritmo Atual:** Mantendo a média histórica vigente, a estimativa estatística linear projeta **${m.projecaoFinalMes} apoios** (${superouProjecao ? 'suficiente para superar a meta' : 'abaixo da meta corporativa'}).
-* **Gap Operacional:** ${superouProjecao ? `Superávit estimado de +${m.projecaoFinalMes - m.metaMensal} apoios.` : `Déficit projetado de ${m.metaMensal - m.projecaoFinalMes} apoios se o ritmo não for acelerado.`}
+### 🚀 Cenários & Projeções
+* **Cenário Linear Atual:** Ao ritmo presente, a projeção estatística aponta para **${m.projecaoFinalMes} apoios** (${superouProjecao ? 'superando o objetivo oficial' : 'abaixo da meta corporativa'}).
+* **Cenário de Aceleração (+1 apoio/colaborador):** Incrementando 1 apoio por atendente ao dia, a unidade projeta fechar em **${m.projecaoFinalMes + (m.diasRestantesNoMes * (Number(payload.atendentesAtivos) || 5))} apoios**, garantindo folga estratégica.
 
-### 💡 Recomendações Estratégicas para o Gestor
-1. **Calibração de Ritmo:** Ajustar a meta individual diária dos colaboradores para **${(m.ritmoNecessarioPorDiaRestante / Math.max(Number(payload.atendentesAtivos) || 1, 1)).toFixed(1)} apoios/atendente/dia**.
-2. **Foco em Patologias Contínuas:** Priorizar a abordagem nos programas de adesão contínua (hipertensão, dislipidemia e diabetes), que possuem maior taxa natural de adesão ao acompanhamento.
-3. **Revisão de Metas Intermediárias:** Estabelecer checkpoints semanais com a equipe para evitar concentração de demanda na última semana do mês.`;
+### 🎯 Plano de Voo (Missões Práticas para o Gestor)
+1. **Missão de Abertura:** Calibrar a meta individual para **${(m.ritmoNecessarioPorDiaRestante / Math.max(Number(payload.atendentesAtivos) || 1, 1)).toFixed(1)} apoios/atendente/dia**.
+2. **Missão Tática:** Priorizar programas contínuos (hipertensão e diabetes) com maior propensão natural de acompanhamento.
+3. **Ponto de Controle:** Estabelecer checkpoints semanais para evitar concentração de demanda na última semana do ciclo.`;
     }
   }
 }

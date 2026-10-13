@@ -312,112 +312,41 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
         />
       </div>
 
-      {/* Seção Inteligência Artificial Gemini (Diária e Mensal) */}
+      {/* Seção Inteligência Artificial Executiva (Diária e Mensal) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Card IA: Análise Diária */}
-        <div className="bg-surface-container-lowest rounded-xl border border-primary/20 shadow-subtle p-5 flex flex-col justify-between relative overflow-hidden">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[20px]">psychology</span>
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-on-surface">Análise Inteligente do Dia</h3>
-                <span className="text-[11px] text-on-surface-variant">
-                  {dailyAnalysis ? `Última atualização: ${formatDateTimeBR(dailyAnalysis.updatedAt)}` : 'Google Gemini 3.6 Flash'}
-                </span>
-              </div>
-            </div>
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleGenerateDailyAI(true)}
-                isLoading={isLoadingDailyAI}
-                loadingText="Gerando..."
-                icon="refresh"
-              >
-                Regenerar
-              </Button>
-            )}
-          </div>
+        <AIExecutiveReportCard
+          title="Parecer Executivo do Dia"
+          type="daily"
+          analysis={dailyAnalysis}
+          isLoading={isLoadingDailyAI}
+          isAdmin={isAdmin}
+          error={aiError}
+          onRefresh={() => handleGenerateDailyAI(true)}
+          metricsSummary={{
+            percentage: metrics.todayPercentage,
+            realizedText: `${metrics.todayTotal}`,
+            goalText: `${metrics.todayGoal}`,
+            secondaryMetricLabel: 'Média / Atendente',
+            secondaryMetricValue: `${metrics.todayAveragePerAttendant}`,
+          }}
+        />
 
-          <div className="bg-surface-container-low/60 rounded-lg p-4 text-xs text-on-surface leading-relaxed flex-1 border border-outline-variant/30 overflow-y-auto max-h-56">
-            {isLoadingDailyAI ? (
-              <div className="flex items-center justify-center py-8 text-on-surface-variant gap-2">
-                <span className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></span>
-                <span>Processando interpretação de indicadores com Google Gemini...</span>
-              </div>
-            ) : dailyAnalysis ? (
-              <div className="prose prose-sm max-w-none whitespace-pre-line">
-                {dailyAnalysis.analysisText}
-              </div>
-            ) : aiError ? (
-              <div className="text-amber-800 p-2 bg-amber-50 rounded border border-amber-200">
-                <p className="font-semibold mb-1">Análise por IA temporariamente indisponível.</p>
-                <p className="text-[11px] text-amber-700">
-                  Os indicadores continuam funcionando normalmente. ({aiError})
-                </p>
-              </div>
-            ) : (
-              <p className="text-on-surface-variant italic">Clique em Regenerar para obter o parecer analítico da IA.</p>
-            )}
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-outline-variant/20 flex items-center justify-between text-[11px] text-outline">
-            <span>Análise gerada por IA com base nos registros disponíveis no sistema.</span>
-            <span className="font-medium text-primary">Modelo: gemini-3.6-flash</span>
-          </div>
-        </div>
-
-        {/* Card IA: Análise Mensal */}
-        <div className="bg-surface-container-lowest rounded-xl border border-secondary/20 shadow-subtle p-5 flex flex-col justify-between relative overflow-hidden">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
-                <span className="material-symbols-outlined text-[20px]">auto_awesome</span>
-              </div>
-              <div>
-                <h3 className="font-bold text-sm text-on-surface">Análise Inteligente do Mês</h3>
-                <span className="text-[11px] text-on-surface-variant">
-                  {monthlyAnalysis ? `Última atualização: ${formatDateTimeBR(monthlyAnalysis.updatedAt)}` : 'Projeções & Ritmo'}
-                </span>
-              </div>
-            </div>
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleGenerateMonthlyAI(true)}
-                isLoading={isLoadingMonthlyAI}
-                loadingText="Gerando..."
-                icon="refresh"
-              >
-                Regenerar
-              </Button>
-            )}
-          </div>
-
-          <div className="bg-surface-container-low/60 rounded-lg p-4 text-xs text-on-surface leading-relaxed flex-1 border border-outline-variant/30 overflow-y-auto max-h-56">
-            {isLoadingMonthlyAI ? (
-              <div className="flex items-center justify-center py-8 text-on-surface-variant gap-2">
-                <span className="w-4 h-4 border-2 border-secondary border-t-transparent rounded-full animate-spin"></span>
-                <span>Calculando projeções e interpretando tendências com Google Gemini...</span>
-              </div>
-            ) : monthlyAnalysis ? (
-              <div className="prose prose-sm max-w-none whitespace-pre-line">
-                {monthlyAnalysis.analysisText}
-              </div>
-            ) : (
-              <p className="text-on-surface-variant italic">Clique em Regenerar para processar o fechamento estatístico mensal.</p>
-            )}
-          </div>
-
-          <div className="mt-3 pt-2 border-t border-outline-variant/20 flex items-center justify-between text-[11px] text-outline">
-            <span>Cálculos oficiais efetuados deterministicamente pelo backend.</span>
-            <span className="font-medium text-secondary">Cloudflare Edge • GEMINI_API_KEY</span>
-          </div>
-        </div>
+        <AIExecutiveReportCard
+          title="Parecer Estratégico do Mês"
+          type="monthly"
+          analysis={monthlyAnalysis}
+          isLoading={isLoadingMonthlyAI}
+          isAdmin={isAdmin}
+          error={aiError}
+          onRefresh={() => handleGenerateMonthlyAI(true)}
+          metricsSummary={{
+            percentage: metrics.monthPercentage,
+            realizedText: `${metrics.monthTotal}`,
+            goalText: `${metrics.monthGoal}`,
+            secondaryMetricLabel: 'Projeção Final',
+            secondaryMetricValue: `${metrics.monthProjection} apoios`,
+          }}
+        />
       </div>
 
       {/* Gráficos em Linha e Barras */}
