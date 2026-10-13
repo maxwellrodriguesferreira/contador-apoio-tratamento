@@ -1,6 +1,7 @@
 services:
   # 1. API Backend (Cloudflare D1 Engine & Google Gemini)
   backend:
+    image: maxwellrodriguesferreira/apoio-tratamento:latest
     build:
       context: ./server
       dockerfile: Dockerfile
@@ -16,10 +17,8 @@ services:
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.6-flash}
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-maxwellferreira@proton.me}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-Teste123$}
-      - APP_ADMIN_MAIL=${APP_ADMIN_MAIL:-maxwellferreira@proton.me}
-      - APP_ADMIN_PASS=${APP_ADMIN_PASS:-Teste123$}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - DATABASE_DIR=/app/data
     volumes:
       - d1_sqlite_data:/app/data
