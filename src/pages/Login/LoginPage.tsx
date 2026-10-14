@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
+import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../contexts/ToastContext';
 import { AuthChallengeError } from '../../services/auth/authService';
 
@@ -23,6 +24,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
+  const [showAboutModal, setShowAboutModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +94,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
       {/* Background Decorativo */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-secondary/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Botão Sobre no Cabeçalho Superior */}
+      <div className="absolute top-4 right-4 sm:top-6 sm:right-6 z-20">
+        <button
+          type="button"
+          onClick={() => setShowAboutModal(true)}
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-container-lowest/90 backdrop-blur-md border border-outline-variant/50 text-xs font-semibold text-on-surface hover:text-primary hover:border-primary/50 shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+          title="Conheça o sistema e suas funcionalidades"
+        >
+          <span className="material-symbols-outlined text-[18px] text-primary">info</span>
+          Sobre
+        </button>
+      </div>
 
       <div className="max-w-md w-full bg-surface-container-lowest rounded-2xl shadow-modal border border-outline-variant/40 p-8 z-10 animate-in fade-in zoom-in-95 duration-300">
         {/* Cabeçalho */}
@@ -224,6 +239,19 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </Button>
           )}
         </form>
+
+        {/* Rodapé com Botão Sobre */}
+        <div className="mt-6 pt-4 border-t border-outline-variant/30 flex items-center justify-between text-xs text-on-surface-variant">
+          <span className="font-medium text-[11px] text-outline">v1.0 • Produção</span>
+          <button
+            type="button"
+            onClick={() => setShowAboutModal(true)}
+            className="inline-flex items-center gap-1.5 font-semibold text-primary hover:text-primary-hover hover:underline transition-colors py-1 px-2.5 rounded-lg hover:bg-primary/5"
+          >
+            <span className="material-symbols-outlined text-[16px]">info</span>
+            Sobre
+          </button>
+        </div>
       </div>
 
       {/* Modal Esqueci Minha Senha */}
@@ -261,6 +289,170 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
       )}
+
+      {/* Modal Sobre a Aplicação */}
+      <Modal
+        isOpen={showAboutModal}
+        onClose={() => setShowAboutModal(false)}
+        title="Sobre o Apoio ao Tratamento"
+        subtitle="Sistema de Gestão Farmacêutica, Metas Clínicas e Inteligência Artificial"
+        maxWidth="2xl"
+        footer={
+          <Button variant="primary" size="md" onClick={() => setShowAboutModal(false)}>
+            Entendi, fechar
+          </Button>
+        }
+      >
+        <div className="space-y-6 text-on-surface">
+          {/* Introdução / Banner */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 flex items-start gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-sm">
+              <span className="material-symbols-outlined text-[24px]">verified</span>
+            </div>
+            <div>
+              <h4 className="font-bold text-sm text-on-surface">
+                Plataforma de Fidelização e Cuidado Farmacêutico
+              </h4>
+              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                Desenvolvido para drogarias e redes farmacêuticas registrarem, gerenciarem e
+                acompanharem a adesão de pacientes a tratamentos contínuos de saúde, potencializando
+                o engajamento da equipe e a fidelização de clientes.
+              </p>
+            </div>
+          </div>
+
+          {/* Grid de Funcionalidades */}
+          <div>
+            <h5 className="text-xs font-bold text-outline uppercase tracking-wider mb-3">
+              Resumo das Funcionalidades
+            </h5>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {/* Funcionalidade 1 */}
+              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">add_task</span>
+                </div>
+                <div>
+                  <h6 className="font-bold text-xs text-on-surface">Registro Ágil de Apoios</h6>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
+                    Lançamento de apoios ao tratamento por data, quantidade e atendente responsável com
+                    validação estrita e controle de versão.
+                  </p>
+                </div>
+              </div>
+
+              {/* Funcionalidade 2 */}
+              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">badge</span>
+                </div>
+                <div>
+                  <h6 className="font-bold text-xs text-on-surface">Equipe de Atendentes</h6>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
+                    Cadastro com código de identificação único, controle de ativação/inativação e
+                    rastreabilidade individualizada de performance.
+                  </p>
+                </div>
+              </div>
+
+              {/* Funcionalidade 3 */}
+              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-600 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">ads_click</span>
+                </div>
+                <div>
+                  <h6 className="font-bold text-xs text-on-surface">Metas Operacionais Inteligentes</h6>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
+                    Configuração de metas diárias e mensais para a loja e por atendente, com cálculo
+                    automático de % de atingimento e projeções.
+                  </p>
+                </div>
+              </div>
+
+              {/* Funcionalidade 4 */}
+              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">monitoring</span>
+                </div>
+                <div>
+                  <h6 className="font-bold text-xs text-on-surface">Dashboard em Tempo Real</h6>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
+                    Visão unificada dos indicadores do dia e do mês, comparativos com metas,
+                    distribuição por atendente e rankings.
+                  </p>
+                </div>
+              </div>
+
+              {/* Funcionalidade 5 */}
+              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">smart_toy</span>
+                </div>
+                <div>
+                  <h6 className="font-bold text-xs text-on-surface">Inteligência Artificial (Gemini)</h6>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
+                    Relatórios executivos e clínicos gerados automaticamente por IA, identificando
+                    padrões, gargalos e orientações para a equipe.
+                  </p>
+                </div>
+              </div>
+
+              {/* Funcionalidade 6 */}
+              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[20px]">history_edu</span>
+                </div>
+                <div>
+                  <h6 className="font-bold text-xs text-on-surface">Auditoria & Rastreabilidade</h6>
+                  <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
+                    Registro detalhado de todas as alterações (criação, edição, exclusão e restauração),
+                    com valores anteriores e identificação do autor.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Perfis de Acesso & Segurança */}
+          <div className="p-4 rounded-xl bg-surface-container-low/70 border border-outline-variant/30">
+            <h5 className="text-xs font-bold text-on-surface flex items-center gap-2 mb-2.5">
+              <span className="material-symbols-outlined text-[18px] text-primary">security</span>
+              Níveis de Acesso & Segurança (RBAC)
+            </h5>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+              <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/30">
+                <div className="font-bold text-primary flex items-center gap-1.5 mb-1">
+                  <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
+                  Administrador
+                </div>
+                <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                  Acesso total: gestão de usuários, cadastro de atendentes, definição de metas, relatórios
+                  de auditoria, análises com IA e configurações do sistema.
+                </p>
+              </div>
+              <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/30">
+                <div className="font-bold text-secondary flex items-center gap-1.5 mb-1">
+                  <span className="material-symbols-outlined text-[16px]">person</span>
+                  Atendente Farmacêutico
+                </div>
+                <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                  Acesso operacional focado: consulta às suas metas diárias e mensais, acompanhamento
+                  do seu desempenho e registro rápido de apoios.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Rodapé Técnico */}
+          <div className="flex items-center justify-between text-[11px] text-outline pt-1 border-t border-outline-variant/20">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Banco de Dados: Cloudflare D1 (SQLite Edge)
+            </span>
+            <span>Versão 1.0.0 • Sistema Seguro</span>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
