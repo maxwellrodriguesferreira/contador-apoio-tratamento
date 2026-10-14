@@ -159,7 +159,19 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     }
 
     const targetId = rows[0].id;
+
+    // 1. Desvincula de perfis de usuários
+    await D1DatabaseClient.execute('UPDATE user_profiles SET attendant_id = NULL WHERE attendant_id = ?', [targetId]);
+
+    // 2. Desvincula de metas operacionais
+    await D1DatabaseClient.execute('UPDATE goals SET attendant_id = NULL WHERE attendant_id = ?', [targetId]);
+
+    // 3. Remove apoios vinculados para respeitar a integridade referencial do D1/SQLite
+    await D1DatabaseClient.execute('DELETE FROM treatment_supports WHERE attendant_id = ?', [targetId]);
+
+    // 4. Exclui o atendente definitivamente do banco
     await D1DatabaseClient.execute('DELETE FROM attendants WHERE id = ?', [targetId]);
+
     res.json({ success: true, message: 'Atendente excluído com sucesso do Cloudflare D1.' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao excluir atendente no Cloudflare D1.' });
