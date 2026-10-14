@@ -25,7 +25,6 @@ function checkAdminAuth(email: string, pass: string): boolean {
     process.env.APP_ADMIN_MAIL,
     process.env.DEFAULT_ADMIN_EMAIL,
     'maxwellferreira@proton.me',
-    'admin@admin.com.br',
   ]
     .filter(Boolean)
     .map((e) => e!.trim().toLowerCase());
@@ -35,7 +34,6 @@ function checkAdminAuth(email: string, pass: string): boolean {
     process.env.APP_ADMIN_PASS,
     process.env.DEFAULT_ADMIN_PASSWORD,
     'Teste123$',
-    'admin@admin',
   ].filter(Boolean);
 
   return allowedEmails.includes(cleanEmail) && allowedPasswords.includes(pass);
@@ -47,7 +45,6 @@ function checkAtendenteAuth(email: string, pass: string): boolean {
   const allowedEmails = [
     process.env.ATENDENTE_EMAIL,
     process.env.DEFAULT_ATENDENTE_EMAIL,
-    'joao.silva@drogaria.com.br',
   ]
     .filter(Boolean)
     .map((e) => e!.trim().toLowerCase());
@@ -55,7 +52,6 @@ function checkAtendenteAuth(email: string, pass: string): boolean {
   const allowedPasswords = [
     process.env.ATENDENTE_PASSWORD,
     process.env.DEFAULT_ATENDENTE_PASSWORD,
-    'SenhaForte@2026',
   ].filter(Boolean);
 
   return allowedEmails.includes(cleanEmail) && allowedPasswords.includes(pass);

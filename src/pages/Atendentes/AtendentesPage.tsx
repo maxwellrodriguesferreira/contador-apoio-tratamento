@@ -36,6 +36,7 @@ export const AtendentesPage: React.FC = () => {
 
   useEffect(() => {
     loadAttendants();
+    CloudSyncService.syncAllFromCloud();
     const unsubscribe = CloudSyncService.subscribe(loadAttendants);
     return unsubscribe;
   }, [loadAttendants]);
@@ -64,18 +65,20 @@ export const AtendentesPage: React.FC = () => {
     setIsSaving(true);
     try {
       if (editingAttendant) {
-        AttendantService.update(user, editingAttendant.id, {
+        const updated = AttendantService.update(user, editingAttendant.id, {
           name,
           code,
           active,
         });
+        await CloudSyncService.syncAttendant(updated);
         showToast('Atendente atualizado com sucesso.', 'success');
       } else {
-        AttendantService.create(user, {
+        const created = AttendantService.create(user, {
           name,
           code,
           active,
         });
+        await CloudSyncService.syncAttendant(created);
         showToast('Atendente cadastrado com sucesso.', 'success');
       }
       setIsModalOpen(false);
@@ -88,10 +91,11 @@ export const AtendentesPage: React.FC = () => {
     }
   };
 
-  const handleToggleStatus = (attendant: Attendant) => {
+  const handleToggleStatus = async (attendant: Attendant) => {
     if (!user || !isAdmin) return;
     try {
-      AttendantService.toggleStatus(user, attendant.id);
+      const updated = AttendantService.toggleStatus(user, attendant.id);
+      await CloudSyncService.syncAttendant(updated);
       showToast(
         `Atendente ${attendant.name} foi ${attendant.active ? 'desativado' : 'reativado'}.`,
         'info'
@@ -108,7 +112,8 @@ export const AtendentesPage: React.FC = () => {
     setIsDeleting(true);
     try {
       AttendantService.delete(user, deletingAttendant.id);
-      showToast(`Atendente ${deletingAttendant.name} excluído com sucesso.`, 'info', 'Exclusão Concluída');
+      await CloudSyncService.deleteAttendant(deletingAttendant.id);
+      showToast(`Atendente ${deletingAttendant.name} excluído com sucesso do banco de dados.`, 'info', 'Exclusão Concluída');
       setDeletingAttendant(null);
       loadAttendants();
     } catch (err: unknown) {

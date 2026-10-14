@@ -57,12 +57,30 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
   try {
     const existing = await D1DatabaseClient.query<UserRow>(
-      'SELECT id FROM user_profiles WHERE LOWER(email) = ? LIMIT 1',
-      [cleanEmail]
+      'SELECT id FROM user_profiles WHERE LOWER(email) = ? OR id = ? LIMIT 1',
+      [cleanEmail, id]
     );
 
     if (existing.length > 0) {
-      res.status(400).json({ error: 'Já existe um usuário cadastrado com este e-mail.' });
+      const existingId = existing[0].id;
+      await D1DatabaseClient.execute(
+        `UPDATE user_profiles
+         SET name = ?, role = ?, active = ?, attendant_id = ?, updated_at = ?
+         WHERE id = ?`,
+        [name.trim(), role, active ? 1 : 0, attendantId || null, now, existingId]
+      );
+
+      res.status(200).json({
+        id: existingId,
+        authUserId,
+        name: name.trim(),
+        email: cleanEmail,
+        role,
+        active,
+        attendantId: attendantId || undefined,
+        createdAt: now,
+        updatedAt: now,
+      });
       return;
     }
 
@@ -89,14 +107,14 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 });
 
 router.put('/:id', async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = String(req.params.id);
   const { name, role, active, attendantId } = req.body;
   const now = new Date().toISOString();
 
   try {
     const users = await D1DatabaseClient.query<UserRow>(
-      'SELECT * FROM user_profiles WHERE id = ? LIMIT 1',
-      [id]
+      'SELECT * FROM user_profiles WHERE id = ? OR LOWER(email) = ? LIMIT 1',
+      [id, id.toLowerCase()]
     );
 
     if (users.length === 0) {
@@ -105,6 +123,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     }
 
     const current = users[0];
+    const targetId = current.id;
     const newName = name !== undefined ? name.trim() : current.name;
     const newRole = role !== undefined ? role : current.role;
     const newActive = active !== undefined ? (active ? 1 : 0) : current.active;
@@ -114,11 +133,11 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
       `UPDATE user_profiles
        SET name = ?, role = ?, active = ?, attendant_id = ?, updated_at = ?
        WHERE id = ?`,
-      [newName, newRole, newActive, newAttendantId, now, id]
+      [newName, newRole, newActive, newAttendantId, now, targetId]
     );
 
     res.json({
-      id,
+      id: targetId,
       authUserId: current.auth_user_id || undefined,
       name: newName,
       email: current.email,
@@ -135,20 +154,22 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
 });
 
 router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = String(req.params.id);
 
   try {
     const users = await D1DatabaseClient.query<UserRow>(
-      'SELECT * FROM user_profiles WHERE id = ? LIMIT 1',
-      [id]
+      'SELECT * FROM user_profiles WHERE id = ? OR LOWER(email) = ? LIMIT 1',
+      [id, id.toLowerCase()]
     );
 
     if (users.length === 0) {
-      res.status(404).json({ error: 'Usuário não encontrado.' });
+      // Idempotente: se já não existe no banco, considera excluído com sucesso
+      res.json({ success: true, message: 'Usuário já não consta no banco de dados.' });
       return;
     }
 
-    await D1DatabaseClient.execute('DELETE FROM user_profiles WHERE id = ?', [id]);
+    const targetId = users[0].id;
+    await D1DatabaseClient.execute('DELETE FROM user_profiles WHERE id = ?', [targetId]);
     res.json({ success: true, message: 'Usuário excluído com sucesso do Cloudflare D1.' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao excluir usuário no Cloudflare D1.' });

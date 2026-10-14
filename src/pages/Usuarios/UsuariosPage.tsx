@@ -48,6 +48,8 @@ export const UsuariosPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    // Garante busca de dados frescos diretamente do Cloudflare D1
+    CloudSyncService.syncAllFromCloud();
     const unsubscribe = CloudSyncService.subscribe(loadData);
     return unsubscribe;
   }, [loadData]);
@@ -77,20 +79,20 @@ export const UsuariosPage: React.FC = () => {
     setIsSaving(true);
     try {
       if (editingUser) {
-        AuthService.updateUser(currentUser, editingUser.id, {
+        await AuthService.updateUser(currentUser, editingUser.id, {
           name,
           role,
           attendantId: role === 'ATENDENTE' ? attendantId || undefined : undefined,
         });
         showToast('Usuário atualizado com sucesso.', 'success');
       } else {
-        AuthService.createUser(currentUser, {
+        await AuthService.createUser(currentUser, {
           name,
           email,
           role,
           attendantId: role === 'ATENDENTE' ? attendantId || undefined : undefined,
         });
-        showToast('Convite Cognito enviado com sucesso.', 'success', 'Usuário Criado');
+        showToast('Usuário criado com sucesso no banco de dados.', 'success', 'Usuário Criado');
       }
       setIsModalOpen(false);
       refreshUser();
@@ -103,10 +105,10 @@ export const UsuariosPage: React.FC = () => {
     }
   };
 
-  const handleToggleStatus = (targetUser: UserProfile) => {
+  const handleToggleStatus = async (targetUser: UserProfile) => {
     if (!currentUser || !isAdmin) return;
     try {
-      AuthService.toggleUserStatus(currentUser, targetUser.id);
+      await AuthService.toggleUserStatus(currentUser, targetUser.id);
       showToast(
         `Usuário ${targetUser.name} foi ${targetUser.active ? 'desativado' : 'reativado'}.`,
         'info'
@@ -123,8 +125,8 @@ export const UsuariosPage: React.FC = () => {
     if (!currentUser || !isAdmin || !deletingUser) return;
     setIsDeleting(true);
     try {
-      AuthService.deleteUser(currentUser, deletingUser.id);
-      showToast(`Usuário ${deletingUser.name} excluído com sucesso.`, 'success');
+      await AuthService.deleteUser(currentUser, deletingUser.id);
+      showToast(`Usuário ${deletingUser.name} excluído com sucesso do banco de dados.`, 'success');
       setDeletingUser(null);
       refreshUser();
       loadData();

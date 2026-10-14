@@ -16,7 +16,7 @@ export class GoalService {
   /**
    * Salva ou atualiza uma meta criando histórico temporal
    */
-  static setGoal(
+  static async setGoal(
     currentUser: UserProfile,
     data: {
       type: GoalType;
@@ -25,7 +25,7 @@ export class GoalService {
       endDate?: string | null;
       attendantId?: string;
     }
-  ): Goal {
+  ): Promise<Goal> {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem definir metas.');
     }
@@ -38,6 +38,7 @@ export class GoalService {
     const goals = LocalDatabase.getGoals();
 
     // Encerra a meta anterior do mesmo tipo e atendente (se houver) colocando endDate
+    const syncPromises: Promise<void>[] = [];
     goals.forEach((g) => {
       if (
         g.active &&
@@ -49,9 +50,13 @@ export class GoalService {
           g.endDate = validated.startDate;
         }
         g.updatedAt = new Date().toISOString();
-        CloudSyncService.syncGoal(g);
+        syncPromises.push(CloudSyncService.syncGoal(g));
       }
     });
+
+    if (syncPromises.length > 0) {
+      await Promise.all(syncPromises);
+    }
 
     const newGoal: Goal = {
       id: `goal-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -67,7 +72,7 @@ export class GoalService {
 
     goals.push(newGoal);
     LocalDatabase.saveGoals(goals);
-    CloudSyncService.syncGoal(newGoal);
+    await CloudSyncService.syncGoal(newGoal);
 
     AuditService.logSystemAction(
       currentUser.id,

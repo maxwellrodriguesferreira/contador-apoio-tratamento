@@ -53,6 +53,29 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   const id = req.body.id || `goal-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
 
   try {
+    const existing = await D1DatabaseClient.query<GoalRow>('SELECT id FROM goals WHERE id = ? LIMIT 1', [id]);
+    if (existing.length > 0) {
+      await D1DatabaseClient.execute(
+        `UPDATE goals
+         SET type = ?, attendant_id = ?, target_value = ?, start_date = ?, end_date = ?, active = ?, updated_at = ?
+         WHERE id = ?`,
+        [type, attendantId || null, numTarget, startDate, endDate || null, active ? 1 : 0, now, id]
+      );
+
+      res.status(200).json({
+        id,
+        type,
+        attendantId: attendantId || undefined,
+        targetValue: numTarget,
+        startDate,
+        endDate: endDate || undefined,
+        active,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return;
+    }
+
     await D1DatabaseClient.execute(
       `INSERT INTO goals (id, type, attendant_id, target_value, start_date, end_date, active, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -123,7 +146,7 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const rows = await D1DatabaseClient.query<GoalRow>('SELECT * FROM goals WHERE id = ? LIMIT 1', [id]);
     if (rows.length === 0) {
-      res.status(404).json({ error: 'Meta não encontrada.' });
+      res.json({ success: true, message: 'Meta já não consta no banco de dados.' });
       return;
     }
 

@@ -34,6 +34,7 @@ export const MetasPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    CloudSyncService.syncAllFromCloud();
     const unsubscribe = CloudSyncService.subscribe(loadData);
     return unsubscribe;
   }, [loadData]);
@@ -61,7 +62,7 @@ export const MetasPage: React.FC = () => {
 
     setIsSaving(true);
     try {
-      GoalService.setGoal(user, {
+      await GoalService.setGoal(user, {
         type: goalType,
         targetValue,
         startDate,
@@ -71,7 +72,7 @@ export const MetasPage: React.FC = () => {
             : undefined,
       });
 
-      showToast('Meta configurada e versionada com sucesso.', 'success', 'Meta Atualizada');
+      showToast('Meta configurada e salva com sucesso no banco de dados.', 'success', 'Meta Atualizada');
       setIsModalOpen(false);
       loadData();
     } catch (err: unknown) {

@@ -57,6 +57,7 @@ export const LancamentosPage: React.FC = () => {
 
   useEffect(() => {
     loadData();
+    CloudSyncService.syncAllFromCloud();
     const unsubscribe = CloudSyncService.subscribe(loadData);
     return unsubscribe;
   }, [loadData]);

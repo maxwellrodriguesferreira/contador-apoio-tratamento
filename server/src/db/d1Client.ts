@@ -218,8 +218,32 @@ export class D1DatabaseClient {
   private static seedInitialData(): void {
     if (!this.localDb) return;
 
+    // Verifica se o seed já foi executado através de flag em system_settings
+    try {
+      const seededRow = this.localDb
+        .prepare("SELECT value FROM system_settings WHERE key = 'system_seeded'")
+        .get() as { value: string } | undefined;
+
+      if (seededRow && seededRow.value === '1') {
+        return;
+      }
+    } catch {
+      // Se a tabela ainda não existir, segue para verificação
+    }
+
+    // Se já existem perfis de usuários cadastrados, marca como seeded e sai sem recriar
     const countUsers = this.localDb.prepare('SELECT COUNT(*) as count FROM user_profiles').get() as { count: number };
-    if (countUsers.count > 0) return;
+    if (countUsers.count > 0) {
+      try {
+        this.localDb.prepare(`
+          INSERT OR REPLACE INTO system_settings (key, value, updated_at)
+          VALUES ('system_seeded', '1', ?)
+        `).run(new Date().toISOString());
+      } catch {
+        // Ignora erro
+      }
+      return;
+    }
 
     console.info('🌱 Populando dados iniciais no Cloudflare D1...');
     const now = new Date().toISOString();
@@ -306,6 +330,15 @@ export class D1DatabaseClient {
         INSERT INTO goals (id, type, attendant_id, target_value, start_date, end_date, active, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(g.id, g.type, g.attendant_id, g.target_value, g.start_date, g.end_date, g.active, now, now);
+    }
+
+    try {
+      this.localDb.prepare(`
+        INSERT OR REPLACE INTO system_settings (key, value, updated_at)
+        VALUES ('system_seeded', '1', ?)
+      `).run(now);
+    } catch {
+      // Ignora erro
     }
 
     console.info('✓ Dados iniciais de seed cadastrados com sucesso no Cloudflare D1.');

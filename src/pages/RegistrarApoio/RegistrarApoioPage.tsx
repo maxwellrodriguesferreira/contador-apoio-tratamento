@@ -8,6 +8,7 @@ import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
 import { useToast } from '../../contexts/ToastContext';
+import { CloudSyncService } from '../../services/api/cloudSyncService';
 
 interface RegistrarApoioPageProps {
   onNavigate: (path: string) => void;
@@ -32,6 +33,13 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
     if (list.length > 0 && !attendantId) {
       setAttendantId(list[0].id);
     }
+    CloudSyncService.syncAllFromCloud().then(() => {
+      const refreshed = AttendantService.getActive();
+      setActiveAttendants(refreshed);
+      if (refreshed.length > 0 && !attendantId) {
+        setAttendantId(refreshed[0].id);
+      }
+    });
   }, []);
 
   const handleIncrement = (amount: number) => {

@@ -49,12 +49,27 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
   try {
     const existing = await D1DatabaseClient.query<AttendantRow>(
-      'SELECT id FROM attendants WHERE LOWER(code) = ? LIMIT 1',
-      [cleanCode.toLowerCase()]
+      'SELECT id FROM attendants WHERE LOWER(code) = ? OR id = ? LIMIT 1',
+      [cleanCode.toLowerCase(), id]
     );
 
     if (existing.length > 0) {
-      res.status(400).json({ error: 'Já existe um atendente cadastrado com este código.' });
+      const existingId = existing[0].id;
+      await D1DatabaseClient.execute(
+        `UPDATE attendants
+         SET name = ?, code = ?, active = ?, updated_at = ?
+         WHERE id = ?`,
+        [cleanName, cleanCode, active ? 1 : 0, now, existingId]
+      );
+
+      res.status(200).json({
+        id: existingId,
+        name: cleanName,
+        code: cleanCode,
+        active,
+        createdAt: now,
+        updatedAt: now,
+      });
       return;
     }
 
@@ -130,20 +145,21 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
 });
 
 router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
-  const { id } = req.params;
+  const id = String(req.params.id);
 
   try {
     const rows = await D1DatabaseClient.query<AttendantRow>(
-      'SELECT * FROM attendants WHERE id = ? LIMIT 1',
-      [id]
+      'SELECT * FROM attendants WHERE id = ? OR LOWER(code) = ? LIMIT 1',
+      [id, id.toLowerCase()]
     );
 
     if (rows.length === 0) {
-      res.status(404).json({ error: 'Atendente não encontrado.' });
+      res.json({ success: true, message: 'Atendente já não consta no banco de dados.' });
       return;
     }
 
-    await D1DatabaseClient.execute('DELETE FROM attendants WHERE id = ?', [id]);
+    const targetId = rows[0].id;
+    await D1DatabaseClient.execute('DELETE FROM attendants WHERE id = ?', [targetId]);
     res.json({ success: true, message: 'Atendente excluído com sucesso do Cloudflare D1.' });
   } catch (error) {
     res.status(500).json({ error: 'Erro ao excluir atendente no Cloudflare D1.' });

@@ -157,10 +157,10 @@ export class AuthService {
     return LocalDatabase.getUserProfiles();
   }
 
-  static createUser(
+  static async createUser(
     currentUser: UserProfile,
     data: { name: string; email: string; role: UserRole; active?: boolean; attendantId?: string }
-  ): UserProfile {
+  ): Promise<UserProfile> {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem criar usuários.');
     }
@@ -185,7 +185,7 @@ export class AuthService {
 
     users.push(newUser);
     LocalDatabase.saveUserProfiles(users);
-    CloudSyncService.syncUser(newUser);
+    await CloudSyncService.syncUser(newUser);
 
     AuditService.logSystemAction(
       currentUser.id,
@@ -200,7 +200,7 @@ export class AuthService {
     return newUser;
   }
 
-  static toggleUserStatus(currentUser: UserProfile, userId: string): UserProfile {
+  static async toggleUserStatus(currentUser: UserProfile, userId: string): Promise<UserProfile> {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem alterar o status de usuários.');
     }
@@ -218,7 +218,7 @@ export class AuthService {
     user.active = !user.active;
     user.updatedAt = new Date().toISOString();
     LocalDatabase.saveUserProfiles(users);
-    CloudSyncService.syncUser(user);
+    await CloudSyncService.syncUser(user);
 
     AuditService.logSystemAction(
       currentUser.id,
@@ -233,11 +233,11 @@ export class AuthService {
     return user;
   }
 
-  static updateUser(
+  static async updateUser(
     currentUser: UserProfile,
     userId: string,
     data: { name: string; role: UserRole; attendantId?: string }
-  ): UserProfile {
+  ): Promise<UserProfile> {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem editar usuários.');
     }
@@ -261,7 +261,7 @@ export class AuthService {
       this.setCurrentUser(user);
     }
 
-    CloudSyncService.syncUser(user);
+    await CloudSyncService.syncUser(user);
 
     AuditService.logSystemAction(
       currentUser.id,
@@ -276,7 +276,7 @@ export class AuthService {
     return user;
   }
 
-  static deleteUser(currentUser: UserProfile, userId: string): UserProfile {
+  static async deleteUser(currentUser: UserProfile, userId: string): Promise<UserProfile> {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem excluir usuários.');
     }
@@ -293,7 +293,7 @@ export class AuthService {
 
     const [removedUser] = users.splice(index, 1);
     LocalDatabase.saveUserProfiles(users);
-    CloudSyncService.deleteUser(removedUser.id);
+    await CloudSyncService.deleteUser(removedUser.id);
 
     AuditService.logSystemAction(
       currentUser.id,

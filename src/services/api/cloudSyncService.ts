@@ -1,4 +1,4 @@
-import { apiRequest, isCloudConfigured } from './cloudflareClient';
+import { apiRequest } from './cloudflareClient';
 import { LocalDatabase } from '../storage/localDatabase';
 import { Attendant, Goal, TreatmentSupport, TreatmentSupportAudit, UserProfile, AuditLog } from '../../types';
 
@@ -46,7 +46,7 @@ export class CloudSyncService {
       // 1. Sincronizar Atendentes
       try {
         const cloudAttendants = await apiRequest<Attendant[]>('/attendants');
-        if (cloudAttendants && cloudAttendants.length > 0) {
+        if (Array.isArray(cloudAttendants)) {
           LocalDatabase.saveAttendants(cloudAttendants);
         }
       } catch (e) {
@@ -56,7 +56,7 @@ export class CloudSyncService {
       // 2. Sincronizar Apoios ao Tratamento
       try {
         const cloudSupports = await apiRequest<TreatmentSupport[]>('/supports?includeDeleted=true');
-        if (cloudSupports && cloudSupports.length > 0) {
+        if (Array.isArray(cloudSupports)) {
           LocalDatabase.saveSupports(cloudSupports);
         }
       } catch (e) {
@@ -66,7 +66,7 @@ export class CloudSyncService {
       // 3. Sincronizar Metas
       try {
         const cloudGoals = await apiRequest<Goal[]>('/goals');
-        if (cloudGoals && cloudGoals.length > 0) {
+        if (Array.isArray(cloudGoals)) {
           LocalDatabase.saveGoals(cloudGoals);
         }
       } catch (e) {
@@ -76,7 +76,7 @@ export class CloudSyncService {
       // 4. Sincronizar Usuários
       try {
         const cloudUsers = await apiRequest<UserProfile[]>('/users');
-        if (cloudUsers && cloudUsers.length > 0) {
+        if (Array.isArray(cloudUsers)) {
           LocalDatabase.saveUserProfiles(cloudUsers);
         }
       } catch (e) {
@@ -86,7 +86,7 @@ export class CloudSyncService {
       // 5. Sincronizar Auditoria de Apoios
       try {
         const cloudSupportAudits = await apiRequest<TreatmentSupportAudit[]>('/audit/supports');
-        if (cloudSupportAudits && cloudSupportAudits.length > 0) {
+        if (Array.isArray(cloudSupportAudits)) {
           LocalDatabase.saveSupportAudits(cloudSupportAudits);
         }
       } catch (e) {
@@ -96,7 +96,7 @@ export class CloudSyncService {
       // 6. Sincronizar Logs Globais de Auditoria
       try {
         const cloudAuditLogs = await apiRequest<AuditLog[]>('/audit/logs');
-        if (cloudAuditLogs && cloudAuditLogs.length > 0) {
+        if (Array.isArray(cloudAuditLogs)) {
           LocalDatabase.saveAuditLogs(cloudAuditLogs);
         }
       } catch (e) {
@@ -112,10 +112,9 @@ export class CloudSyncService {
     }
   }
 
-  // --- Mutations Assíncronas para o Cloudflare D1 ---
+  // --- Mutations Assíncronas Diretas para o Cloudflare D1 ---
 
   static async syncAttendant(attendant: Attendant): Promise<void> {
-    if (!isCloudConfigured()) return;
     try {
       await apiRequest<Attendant>('/attendants', 'POST', attendant).catch(async () => {
         await apiRequest<Attendant>(`/attendants/${attendant.id}`, 'PUT', attendant);
@@ -126,7 +125,6 @@ export class CloudSyncService {
   }
 
   static async deleteAttendant(id: string): Promise<void> {
-    if (!isCloudConfigured()) return;
     try {
       await apiRequest<{ success: boolean }>(`/attendants/${id}`, 'DELETE');
     } catch (e) {
@@ -135,18 +133,22 @@ export class CloudSyncService {
   }
 
   static async syncSupport(support: TreatmentSupport): Promise<void> {
-    if (!isCloudConfigured()) return;
     try {
-      await apiRequest<TreatmentSupport>('/supports', 'POST', support).catch(async () => {
-        await apiRequest<TreatmentSupport>(`/supports/${support.id}`, 'PUT', support);
-      });
+      if (support.deletedAt) {
+        await apiRequest<TreatmentSupport>(`/supports/${support.id}`, 'PUT', support).catch(async () => {
+          await apiRequest<TreatmentSupport>('/supports', 'POST', support);
+        });
+      } else {
+        await apiRequest<TreatmentSupport>('/supports', 'POST', support).catch(async () => {
+          await apiRequest<TreatmentSupport>(`/supports/${support.id}`, 'PUT', support);
+        });
+      }
     } catch (e) {
       console.warn('Erro ao sincronizar apoio no Cloudflare D1:', e);
     }
   }
 
   static async syncGoal(goal: Goal): Promise<void> {
-    if (!isCloudConfigured()) return;
     try {
       await apiRequest<Goal>('/goals', 'POST', goal).catch(async () => {
         await apiRequest<Goal>(`/goals/${goal.id}`, 'PUT', goal);
@@ -157,7 +159,6 @@ export class CloudSyncService {
   }
 
   static async deleteGoal(id: string): Promise<void> {
-    if (!isCloudConfigured()) return;
     try {
       await apiRequest<{ success: boolean }>(`/goals/${id}`, 'DELETE');
     } catch (e) {
@@ -166,7 +167,6 @@ export class CloudSyncService {
   }
 
   static async syncUser(user: UserProfile): Promise<void> {
-    if (!isCloudConfigured()) return;
     try {
       await apiRequest<UserProfile>('/users', 'POST', user).catch(async () => {
         await apiRequest<UserProfile>(`/users/${user.id}`, 'PUT', user);
@@ -177,7 +177,6 @@ export class CloudSyncService {
   }
 
   static async deleteUser(id: string): Promise<void> {
-    if (!isCloudConfigured()) return;
     try {
       await apiRequest<{ success: boolean }>(`/users/${id}`, 'DELETE');
     } catch (e) {
@@ -186,7 +185,6 @@ export class CloudSyncService {
   }
 
   static async syncAuditLog(log: AuditLog): Promise<void> {
-    if (!isCloudConfigured()) return;
     try {
       await apiRequest<{ id: string }>('/audit/logs', 'POST', log);
     } catch (e) {
@@ -195,7 +193,6 @@ export class CloudSyncService {
   }
 
   static async syncSupportAudit(audit: TreatmentSupportAudit): Promise<void> {
-    if (!isCloudConfigured()) return;
     try {
       await apiRequest<{ id: string }>('/audit/supports', 'POST', audit);
     } catch (e) {

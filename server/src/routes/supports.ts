@@ -51,7 +51,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
 });
 
 router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { date, attendantId, quantity, observation, createdBy } = req.body;
+  const { date, attendantId, quantity, observation, createdBy, deletedAt, deletedBy, version } = req.body;
 
   if (!date || !attendantId || quantity === undefined) {
     res.status(400).json({ error: 'Data, atendente e quantidade são obrigatórios.' });
@@ -67,12 +67,44 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   const now = new Date().toISOString();
   const id = req.body.id || `sup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const author = createdBy || 'ADMIN';
+  const recVersion = typeof version === 'number' && version > 0 ? version : 1;
 
   try {
+    const existing = await D1DatabaseClient.query<SupportRow>(
+      'SELECT id, version FROM treatment_supports WHERE id = ? LIMIT 1',
+      [id]
+    );
+
+    if (existing.length > 0) {
+      // Upsert/idempotência para sincronização confiável
+      await D1DatabaseClient.execute(
+        `UPDATE treatment_supports
+         SET date = ?, attendant_id = ?, quantity = ?, observation = ?, updated_by = ?, deleted_at = ?, deleted_by = ?, version = ?, updated_at = ?
+         WHERE id = ?`,
+        [date, attendantId, numQuantity, observation || null, author, deletedAt || null, deletedBy || null, recVersion, now, id]
+      );
+
+      res.status(200).json({
+        id,
+        date,
+        attendantId,
+        quantity: numQuantity,
+        observation: observation || undefined,
+        createdBy: author,
+        updatedBy: author,
+        deletedAt: deletedAt || null,
+        deletedBy: deletedBy || null,
+        version: recVersion,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return;
+    }
+
     await D1DatabaseClient.execute(
-      `INSERT INTO treatment_supports (id, date, attendant_id, quantity, observation, created_by, version, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
-      [id, date, attendantId, numQuantity, observation || null, author, now, now]
+      `INSERT INTO treatment_supports (id, date, attendant_id, quantity, observation, created_by, deleted_at, deleted_by, version, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, date, attendantId, numQuantity, observation || null, author, deletedAt || null, deletedBy || null, recVersion, now, now]
     );
 
     res.status(201).json({
@@ -82,9 +114,9 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       quantity: numQuantity,
       observation: observation || undefined,
       createdBy: author,
-      deletedAt: null,
-      deletedBy: null,
-      version: 1,
+      deletedAt: deletedAt || null,
+      deletedBy: deletedBy || null,
+      version: recVersion,
       createdAt: now,
       updatedAt: now,
     });
@@ -95,7 +127,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
 router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { date, attendantId, quantity, observation, updatedBy, expectedVersion } = req.body;
+  const { date, attendantId, quantity, observation, updatedBy, expectedVersion, deletedAt, deletedBy } = req.body;
   const now = new Date().toISOString();
 
   try {
@@ -124,13 +156,15 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     const newQuantity = quantity !== undefined ? parseInt(String(quantity), 10) : current.quantity;
     const newObservation = observation !== undefined ? (observation || null) : current.observation;
     const author = updatedBy || current.updated_by || 'ADMIN';
+    const newDeletedAt = deletedAt !== undefined ? (deletedAt || null) : current.deleted_at;
+    const newDeletedBy = deletedBy !== undefined ? (deletedBy || null) : current.deleted_by;
     const nextVersion = current.version + 1;
 
     await D1DatabaseClient.execute(
       `UPDATE treatment_supports
-       SET date = ?, attendant_id = ?, quantity = ?, observation = ?, updated_by = ?, version = ?, updated_at = ?
+       SET date = ?, attendant_id = ?, quantity = ?, observation = ?, updated_by = ?, deleted_at = ?, deleted_by = ?, version = ?, updated_at = ?
        WHERE id = ?`,
-      [newDate, newAttendantId, newQuantity, newObservation, author, nextVersion, now, id]
+      [newDate, newAttendantId, newQuantity, newObservation, author, newDeletedAt, newDeletedBy, nextVersion, now, id]
     );
 
     res.json({
@@ -141,8 +175,8 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
       observation: newObservation || undefined,
       createdBy: current.created_by,
       updatedBy: author,
-      deletedAt: current.deleted_at,
-      deletedBy: current.deleted_by,
+      deletedAt: newDeletedAt,
+      deletedBy: newDeletedBy,
       version: nextVersion,
       createdAt: current.created_at,
       updatedAt: now,
