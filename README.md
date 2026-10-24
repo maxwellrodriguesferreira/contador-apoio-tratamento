@@ -6,9 +6,9 @@ Construído com arquitetura moderna e conteinerizada em **Contêiner Único (*Si
 
 ---
 
-> 📖 **Guia Completo de Deploy na VPS**:
-> Para o passo a passo detalhado da instalação do Nginx Proxy Manager, configuração de DNS na Hostinger e emissão de certificados SSL gratuitos (Let's Encrypt), consulte o manual dedicado:
-> 👉 **[MANUAL_DEPLOY_VPS_NPM.md](MANUAL_DEPLOY_VPS_NPM.md)** *(ou o PDF complementar `MANUAL_DEPLOY_VPS_NPM.pdf`)*.
+> 📖 **Guias de Deploy e Orquestração**:
+> * **Docker & VPS (Nginx Proxy Manager)**: Consulte o manual dedicado 👉 **[MANUAL_DEPLOY_VPS_NPM.md](MANUAL_DEPLOY_VPS_NPM.md)** *(ou o PDF complementar `MANUAL_DEPLOY_VPS_NPM.pdf`)*.
+> * **Kubernetes (K8s)**: Para orquestração em clusters Kubernetes (k3s, EKS, GKE, AKS, Vanilla), consulte os manifestos e guia 👉 **[k8s/README.md](k8s/README.md)**.
 
 ---
 

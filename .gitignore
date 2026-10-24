@@ -29,6 +29,13 @@ dist-ssr
 .env.*
 !.env.example
 
+# Kubernetes Secrets e arquivos de credenciais sensíveis
+*secret*.yaml
+*secret*.yml
+k8s/secret*.yaml
+k8s/secret*.yml
+
+
 # Local Database & data
 data/
 server/data/

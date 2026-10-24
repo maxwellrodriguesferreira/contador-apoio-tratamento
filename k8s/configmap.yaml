@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: contador-apoio-config
+  namespace: contador-apoio
+  labels:
+    app.kubernetes.io/name: contador-apoio
+    app.kubernetes.io/component: config
+    app.kubernetes.io/part-of: contador-apoio-tratamento
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  CLIENT_BUILD_PATH: "/app/client"
+  DATABASE_DIR: "/app/data"
+  GEMINI_DEFAULT_MODEL: "gemini-3.6-flash"

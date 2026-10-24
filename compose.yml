@@ -1,0 +1,85 @@
+# ==============================================================================
+# Docker Compose (compose.yml) — Apoio ao Tratamento
+# Otimizado para VPS com Portainer e Nginx Proxy Manager (NPM)
+# ==============================================================================
+
+services:
+  app:
+    image: maxwellrodriguesferreira/apoio-tratamento:latest
+    container_name: contador-apoio-app
+    restart: unless-stopped
+
+    # --------------------------------------------------------------------------
+    # Exposição de Portas
+    # --------------------------------------------------------------------------
+    # Na arquitetura com Nginx Proxy Manager, NÃO é necessário mapear portas no host.
+    # O NPM comunica-se diretamente com o contêiner através da rede interna 'rede-proxy'
+    # usando o hostname 'contador-apoio-app' e a porta interna 3000.
+    expose:
+      - "3000"
+
+    # Se você precisar acessar diretamente pelo IP da VPS sem passar pelo proxy (opcional):
+    # ports:
+    #   - "3000:3000"
+
+    # --------------------------------------------------------------------------
+    # Variáveis de Ambiente
+    # --------------------------------------------------------------------------
+    # O Compose carrega variáveis do arquivo .env (se existir) ou
+    # da aba 'Environment variables' no Portainer Stacks.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - CLIENT_BUILD_PATH=/app/client
+      - DATABASE_DIR=/app/data
+      # Repasse e fallback de variáveis (preenchidas no .env ou no Portainer)
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
+      - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.6-flash}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-}
+      - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-}
+
+    # --------------------------------------------------------------------------
+    # Persistência de Dados (SQLite Local Engine)
+    # --------------------------------------------------------------------------
+    volumes:
+      - d1_sqlite_data:/app/data
+
+    # --------------------------------------------------------------------------
+    # Verificação de Saúde (Healthcheck)
+    # --------------------------------------------------------------------------
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:' + (process.env.PORT || 3000) + '/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # --------------------------------------------------------------------------
+    # Rede Docker Compartilhada com Nginx Proxy Manager e Portainer
+    # --------------------------------------------------------------------------
+    networks:
+      - rede-proxy
+
+# ==============================================================================
+# Volumes Nomeados
+# ==============================================================================
+volumes:
+  d1_sqlite_data:
+    name: contador_apoio_d1_data
+
+# ==============================================================================
+# Redes Externas
+# ==============================================================================
+networks:
+  # Rede externa pré-existente onde estão o Nginx Proxy Manager e o Portainer
+  rede-proxy:
+    name: rede-proxy
+    external: true

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: contador-apoio
+  labels:
+    app.kubernetes.io/name: contador-apoio
+    app.kubernetes.io/part-of: contador-apoio-tratamento

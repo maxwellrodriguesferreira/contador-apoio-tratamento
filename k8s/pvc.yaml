@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: contador-apoio-data-pvc
+  namespace: contador-apoio
+  labels:
+    app.kubernetes.io/name: contador-apoio
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: contador-apoio-tratamento
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  # storageClassName: standard # Descomente e ajuste conforme a StorageClass do seu cluster
