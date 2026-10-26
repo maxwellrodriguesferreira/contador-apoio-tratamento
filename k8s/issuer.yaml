@@ -1,0 +1,19 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-contador-apoio
+  namespace: contador-apoio
+  labels:
+    app.kubernetes.io/name: contador-apoio
+    app.kubernetes.io/component: pki
+    app.kubernetes.io/part-of: contador-apoio-tratamento
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: maxwellferreira@proton.me
+    privateKeySecretRef:
+      name: letsencrypt-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: traefik

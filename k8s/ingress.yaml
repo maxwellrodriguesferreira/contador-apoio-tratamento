@@ -8,20 +8,34 @@ metadata:
     app.kubernetes.io/component: ingress
     app.kubernetes.io/part-of: contador-apoio-tratamento
   annotations:
-    cert-manager.io/cluster-issuer: letsencrypt-prod
-    nginx.ingress.kubernetes.io/ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/proxy-body-size: "25m"
-    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # Traefik Ingress Controller
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    # Cert-Manager para emissão e renovação automática de certificado Let's Encrypt
+    cert-manager.io/issuer: letsencrypt-contador-apoio
+    # Alternativa caso utilize ClusterIssuer global:
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Alternativa caso seu Traefik utilize o resolver ACME interno (sem cert-manager):
+    # traefik.ingress.kubernetes.io/router.tls.certresolver: letsencrypt
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   tls:
     - hosts:
-        - apoio.seudominio.com.br
+        - maxwelldev.online
+        - www.maxwelldev.online
       secretName: contador-apoio-tls
   rules:
-    - host: apoio.seudominio.com.br
+    - host: maxwelldev.online
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: contador-apoio-service
+                port:
+                  name: http
+    - host: www.maxwelldev.online
       http:
         paths:
           - path: /

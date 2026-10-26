@@ -29,11 +29,24 @@ dist-ssr
 .env.*
 !.env.example
 
-# Kubernetes Secrets e arquivos de credenciais sensíveis
+# Kubernetes Secrets e arquivos com credenciais sensíveis
 *secret*.yaml
 *secret*.yml
+!*secret.example*.yaml
+!*secret.example*.yml
 k8s/secret*.yaml
 k8s/secret*.yml
+!k8s/secret.example.yaml
+
+# Manifestos Kubernetes locais / Portainer com credenciais incorporadas
+*all-in-one*.yaml
+*all-in-one*.yml
+!*all-in-one.example*.yaml
+!*all-in-one.example*.yml
+k8s/portainer*.yaml
+k8s/portainer*.yml
+!k8s/portainer*.example.yaml
+!k8s/portainer*.example.yml
 
 
 # Local Database & data

@@ -28,9 +28,9 @@ spec:
         fsGroup: 1000
       containers:
         - name: app
-          # Imagem hospedada no repositório público do Docker Hub (sem necessidade de imagePullSecrets)
-          image: maxwellrodriguesferreira/apoio-tratamento:latest
-          # 'Always' garante que o Kubernetes sempre baixe a versão mais recente publicada no repositório público
+          # Imagem hospedada no repositório público do Docker Hub (tag v1)
+          image: maxwellrodriguesferreira/apoio-tratamento:v1
+          # 'Always' garante que o Kubernetes sempre baixe a versão mais recente publicada no Docker Hub
           imagePullPolicy: Always
           ports:
             - name: http
