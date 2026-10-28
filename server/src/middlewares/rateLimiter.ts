@@ -6,16 +6,17 @@ import type { Request } from 'express';
 let redisClient: Redis | null = null;
 let redisStore: RedisStore | undefined = undefined;
 
-const redisUrl = process.env.REDIS_URL;
+const redisUrl = process.env.REDIS_URL || process.env.UPSTASH_REDIS_URL;
 const redisHost = process.env.REDIS_HOST;
 
 // Inicializa a conexão com o Redis de forma assíncrona e resiliente
 if (redisUrl || redisHost) {
   try {
+    const isUpstashOrTls = Boolean(redisUrl && (redisUrl.startsWith('rediss://') || redisUrl.includes('upstash.io')));
+
     const clientOptions = {
-      lazyConnect: true,
-      enableOfflineQueue: false,
-      maxRetriesPerRequest: 1,
+      maxRetriesPerRequest: 3,
+      tls: isUpstashOrTls ? { rejectUnauthorized: false } : undefined,
       retryStrategy(times: number) {
         // Tenta reconectar a cada 1s a 3s
         return Math.min(times * 200, 3000);
@@ -37,11 +38,6 @@ if (redisUrl || redisHost) {
 
     redisClient.on('error', (err: Error) => {
       console.warn('⚠️  [Redis] Aviso de conexão:', err.message);
-    });
-
-    // Conexão inicial em segundo plano (não bloqueia inicialização da API)
-    redisClient.connect().catch((err) => {
-      console.warn('⚠️  [Redis] Não foi possível conectar ao Redis imediatamente. O Rate Limiter funcionará em modo fallback.', err.message);
     });
 
     redisStore = new RedisStore({
@@ -67,6 +63,11 @@ export const loginRateLimiter = rateLimit({
   legacyHeaders: false, // Desabilita `X-RateLimit-*` legados
   passOnStoreError: true, // Se o Redis oscilar, não derruba a requisição de login
   skipSuccessfulRequests: true, // Login correto com sucesso (status < 400) não consome tentativas
+  validate: {
+    trustProxy: false,
+    xForwardedForHeader: false,
+    default: false,
+  },
   store: redisStore,
   keyGenerator: (req: Request) => {
     const email = (req.body?.email || '').toString().trim().toLowerCase();

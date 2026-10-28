@@ -1,14 +1,15 @@
-name: CI/CD Pipeline — Build, Push e Deploy Automático
+name: CI/CD Pipeline — Build Multi-Arch e Deploy Contínuo (Docker Hub & Watchtower)
 
 on:
   push:
     branches:
       - main
     paths-ignore:
-      - 'README.md'
+      - 'README*.md'
       - 'MANUAL_*.md'
       - 'docs/**'
       - '.gitignore'
+      - '*.pdf'
   workflow_dispatch:
 
 env:
@@ -16,20 +17,20 @@ env:
 
 jobs:
   # ============================================================================
-  # 1. BUILD & PUSH: Compilação e envio da imagem ao Docker Hub
+  # 1. BUILD & PUSH: Compilação Multi-Arquitetura (VPS AMD64 + Raspberry ARM64)
   # ============================================================================
   build-and-push:
-    name: Build & Push Docker Image
+    name: Build & Push Multi-Plataforma
     runs-on: ubuntu-latest
 
     steps:
-      - name: 1. Checkout do Repositório
+      - name: 1. Checkout do Código
         uses: actions/checkout@v4
 
-      - name: 2. Configurar QEMU (Emulação Multi-Arquitetura para ARM/Raspberry)
+      - name: 2. Configurar QEMU (Emulador para arquitetura ARM64 da Raspberry)
         uses: docker/setup-qemu-action@v3
 
-      - name: 3. Configurar Docker Buildx (Cache & Multi-stage)
+      - name: 3. Configurar Docker Buildx (Cache e Multi-arquitetura)
         uses: docker/setup-buildx-action@v3
 
       - name: 4. Autenticação no Docker Hub
@@ -38,7 +39,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: 5. Extrair Metadados e Tags
+      - name: 5. Extração de Metadados e Tags
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -48,7 +49,7 @@ jobs:
             type=raw,value=v1
             type=sha,format=short,prefix=sha-
 
-      - name: 6. Build e Push da Imagem Multi-Plataforma (AMD64 + ARM64)
+      - name: 6. Compilação e Envio da Imagem (AMD64 + ARM64)
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -60,34 +61,19 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ============================================================================
-  # 2. DEPLOY: Atualização Automática no Cluster / Portainer
+  # 2. NOTIFICAÇÃO DO WATCHTOWER: Disparo Opcional via Webhook HTTP
   # ============================================================================
-  deploy:
-    name: Trigger Deploy no Cluster / Portainer
+  trigger-watchtower:
+    name: Notificar Watchtower (Opcional via Webhook)
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
     steps:
-      # Opção A: Deploy via Webhook do Portainer (Mais simples e recomendada)
-      - name: Deploy via Portainer Webhook
-        if: "${{ secrets.PORTAINER_WEBHOOK_URL != '' }}"
+      - name: Disparar Webhook do Watchtower
+        if: "${{ secrets.WATCHTOWER_WEBHOOK_URL != '' }}"
         run: |
-          echo "Disparando Webhook de atualização no Portainer..."
-          curl -k -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
-          echo "Webhook disparado com sucesso!"
-
-      # Opção B: Rollout direto no Kubernetes via SSH na VPS
-      - name: Deploy via SSH (kubectl rollout restart)
-        if: "${{ secrets.VPS_HOST != '' && secrets.VPS_SSH_KEY != '' }}"
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER || 'root' }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || 22 }}
-          script: |
-            echo "Atualizando pods no Kubernetes..."
-            kubectl rollout restart deployment/contador-apoio-app -n contador-apoio
-            kubectl rollout status deployment/contador-apoio-app -n contador-apoio --timeout=120s
-            echo "Deploy concluído com sucesso!"
+          echo "Disparando atualização imediata no Watchtower..."
+          curl -f -X POST "${{ secrets.WATCHTOWER_WEBHOOK_URL }}" \
+            ${{ secrets.WATCHTOWER_HTTP_API_TOKEN != '' && format('-H "Authorization: Bearer {0}"', secrets.WATCHTOWER_HTTP_API_TOKEN) || '' }} || true
+          echo "Sinal enviado com sucesso!"

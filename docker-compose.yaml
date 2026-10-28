@@ -1,0 +1,85 @@
+# ==============================================================================
+# Docker Compose — Apoio ao Tratamento
+# Arquitetura Unificada (React SPA + Express API + Cloudflare D1 + Upstash Redis)
+# Rede compartilhada com Nginx Proxy Manager / Portainer (rede-proxy)
+# ==============================================================================
+
+services:
+  app:
+    image: maxwellrodriguesferreira/apoio-tratamento:latest
+    container_name: contador-apoio-app
+    restart: unless-stopped
+
+    # Exposição de Portas
+    # Expose: Comunicação interna direta do NPM via rede 'rede-proxy'
+    # Ports: Permite acesso direto no host (ex: http://IP_HOST:3000)
+    ports:
+      - "${APP_PORT:-3000}:${PORT:-3000}"
+    expose:
+      - "${PORT:-3000}"
+
+    # Carrega variáveis do arquivo .env caso exista
+    env_file:
+      - path: .env
+        required: false
+
+    # Repasse completo de variáveis de ambiente para o contêiner
+    environment:
+      # Configurações do Runtime e Servidor
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3000}
+      - CLIENT_BUILD_PATH=/app/client
+      - DATABASE_DIR=/app/data
+
+      # Rate Limiting e Cache Distribuído (Upstash Redis)
+      - REDIS_URL=${REDIS_URL:-}
+      - LOGIN_RATE_LIMIT_MAX=${LOGIN_RATE_LIMIT_MAX:-5}
+      - LOGIN_RATE_LIMIT_WINDOW_MS=${LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
+
+      # Banco de Dados Cloudflare D1 (Edge / Nuvem)
+      # Deixe vazio para usar a engine nativa SQLite local em /app/data
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
+      - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
+
+      # Inteligência Artificial (Google Gemini)
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.6-flash}
+
+      # Credenciais de Acesso (Administrador e Atendente)
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-}
+      - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-}
+
+    # Persistência de Dados Locais (SQLite D1 Engine)
+    volumes:
+      - d1_sqlite_data:/app/data
+
+    # Monitoramento de Saúde da Aplicação
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:' + (process.env.PORT || 3000) + '/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # Conexão à rede compartilhada externa
+    networks:
+      - rede-proxy
+
+# ==============================================================================
+# Volumes Persistentes
+# ==============================================================================
+volumes:
+  d1_sqlite_data:
+    name: contador_apoio_d1_data
+
+# ==============================================================================
+# Redes Externas
+# ==============================================================================
+networks:
+  # Rede externa compartilhada com o Nginx Proxy Manager (NPM)
+  rede-proxy:
+    name: rede-proxy
+    external: true

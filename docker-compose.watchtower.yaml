@@ -1,0 +1,101 @@
+# ==============================================================================
+# Docker Compose com Watchtower — Deploy Contínuo Automático
+# Suporta: VPS (Intel/AMD) e Raspberry Pi 4 (ARM64)
+# Rede compartilhada externa: rede-proxy
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Aplicação Principal (Apoio ao Tratamento)
+  # ----------------------------------------------------------------------------
+  app:
+    image: maxwellrodriguesferreira/apoio-tratamento:latest
+    container_name: contador-apoio-app
+    restart: unless-stopped
+
+    # Exposição de Portas
+    ports:
+      - "${APP_PORT:-3000}:${PORT:-3000}"
+    expose:
+      - "${PORT:-3000}"
+
+    env_file:
+      - path: .env
+        required: false
+
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - CLIENT_BUILD_PATH=/app/client
+      - DATABASE_DIR=/app/data
+
+      # Upstash Redis & Rate Limiting
+      - REDIS_URL=${REDIS_URL:-rediss://default:gQAAAAAAA6xGAAIgcDE2ZTBlZDM1NjhjMDI0MWY4OWI1ODE5ZjYxNGVlMGU2Nw@endless-satyr-240710.upstash.io:6379}
+      - LOGIN_RATE_LIMIT_MAX=${LOGIN_RATE_LIMIT_MAX:-5}
+      - LOGIN_RATE_LIMIT_WINDOW_MS=${LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
+
+      # Cloudflare D1
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-ef579acea3be117e010eafc168ca1c2f}
+      - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-9e9cb6e6-6981-4357-9c76-acaff75f7377}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-cfut_fn1ipsv0lbMja3qrbujECzeKBfMHECb16ijzxHVGa54db323}
+
+      # Google Gemini AI
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-AQ.Ab8RN6JcKDz1sNUT_DCJAVoVzGdlyAXddYM_aqhXCwMNrgX8xA}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.6-flash}
+
+      # Credenciais Padrão
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-maxwellferreira@proton.me}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-Teste123$}
+      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-atendente@suaempresa.com.br}
+      - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-}
+
+    volumes:
+      - d1_sqlite_data:/app/data
+
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:' + (process.env.PORT || 3000) + '/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    networks:
+      - rede-proxy
+
+    # Labels para identificação pelo Watchtower
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ----------------------------------------------------------------------------
+  # 2. Watchtower: Agente de Atualização Automática Contínua
+  # ----------------------------------------------------------------------------
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: contador-apoio-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Compatibilidade com Docker Engine moderno na Raspberry Pi / Portainer
+      - DOCKER_API_VERSION=1.44
+      # Intervalo de checagem no Docker Hub em segundos (300s = 5 minutos)
+      - WATCHTOWER_POLL_INTERVAL=300
+      # Remove as imagens Docker antigas após atualizar (economiza espaço em disco)
+      - WATCHTOWER_CLEANUP=true
+      # Atualiza apenas contêineres explicitamente autorizados via label
+      - WATCHTOWER_LABEL_ENABLE=true
+      # Atualização suave sem interromper outros contêineres
+      - WATCHTOWER_ROLLING_RESTART=true
+      # Fuso horário para logs
+      - TZ=America/Sao_Paulo
+    networks:
+      - rede-proxy
+
+volumes:
+  d1_sqlite_data:
+    name: contador_apoio_d1_data
+
+networks:
+  rede-proxy:
+    name: rede-proxy
+    external: true

@@ -7,6 +7,7 @@ Construído com arquitetura moderna e conteinerizada em **Contêiner Único (*Si
 ---
 
 > 📖 **Guias de Deploy e Orquestração**:
+> * **Deploy Contínuo (CI/CD & Watchtower)**: Consulte o guia completo 👉 **[README_CICD_WATCHTOWER.md](README_CICD_WATCHTOWER.md)** para automação contínua via GitHub Actions, Docker Hub e Raspberry Pi 4 / VPS.
 > * **Docker & VPS (Nginx Proxy Manager)**: Consulte o manual dedicado 👉 **[MANUAL_DEPLOY_VPS_NPM.md](MANUAL_DEPLOY_VPS_NPM.md)** *(ou o PDF complementar `MANUAL_DEPLOY_VPS_NPM.pdf`)*.
 > * **Kubernetes (K8s)**: Para orquestração em clusters Kubernetes (k3s, EKS, GKE, AKS, Vanilla), consulte os manifestos e guia 👉 **[k8s/README.md](k8s/README.md)**.
 
