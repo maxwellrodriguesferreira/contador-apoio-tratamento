@@ -95,7 +95,13 @@ export class AuthService {
       }
     } catch (apiError: unknown) {
       const errorMsg = apiError instanceof Error ? apiError.message : '';
-      if (errorMsg.includes('Usuário desativado') || errorMsg.includes('incorretos')) {
+      if (
+        errorMsg.includes('Usuário desativado') ||
+        errorMsg.includes('incorretos') ||
+        errorMsg.includes('tentativas') ||
+        errorMsg.includes('RATE_LIMIT') ||
+        errorMsg.includes('429')
+      ) {
         throw new Error(errorMsg);
       }
       console.warn('API Cloudflare D1 indisponível ou em fallback, autenticando localmente:', errorMsg);

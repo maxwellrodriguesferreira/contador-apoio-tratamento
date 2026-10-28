@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { D1DatabaseClient } from '../db/d1Client.js';
+import { loginRateLimiter } from '../middlewares/rateLimiter.js';
 
 const router = Router();
 
@@ -57,7 +58,7 @@ function checkAtendenteAuth(email: string, pass: string): boolean {
   return allowedEmails.includes(cleanEmail) && allowedPasswords.includes(pass);
 }
 
-router.post('/login', async (req: Request, res: Response): Promise<void> => {
+router.post('/login', loginRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
 
   if (!email || typeof email !== 'string') {

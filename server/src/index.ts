@@ -20,6 +20,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Configura o Express para confiar nos cabeçalhos de proxy reverso (NPM, Cloudflare, etc.)
+app.set('trust proxy', 1);
+
 // Headers de segurança HTTP
 app.use((_req, res, next) => {
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');

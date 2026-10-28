@@ -9,9 +9,19 @@ services:
     restart: unless-stopped
     ports:
       - "${APP_PORT:-${FRONTEND_PORT:-3000}}:${PORT:-3000}"
+    depends_on:
+      redis:
+        condition: service_healthy
     environment:
       - PORT=${PORT:-3000}
       - CLIENT_BUILD_PATH=/app/client
+      - DATABASE_DIR=/app/data
+
+      # Rate Limiting com Redis
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis123}@redis:6379
+      - LOGIN_RATE_LIMIT_MAX=${LOGIN_RATE_LIMIT_MAX:-5}
+      - LOGIN_RATE_LIMIT_WINDOW_MS=${LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
+
       # Repasse seguro de variáveis de ambiente
       - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
       - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-}
@@ -22,7 +32,6 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-}
       - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-}
-      - DATABASE_DIR=/app/data
     volumes:
       - d1_sqlite_data:/app/data
     healthcheck:
@@ -34,9 +43,31 @@ services:
     networks:
       - shared_network
 
+  # Redis para Armazenamento Distribuído de Sessões e Rate Limiting
+  redis:
+    image: redis:7-alpine
+    container_name: contador-apoio-redis
+    restart: unless-stopped
+    command: >
+      sh -c 'redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD:-redis123}"'
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis123}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "redis-cli -a \"$${REDIS_PASSWORD:-redis123}\" ping | grep PONG" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - shared_network
+
 volumes:
   d1_sqlite_data:
     name: contador_apoio_d1_data
+  redis_data:
+    name: contador_apoio_redis_data
 
 networks:
   # Rede Docker externa compartilhada com o Nginx Proxy Manager (rede-proxy)
