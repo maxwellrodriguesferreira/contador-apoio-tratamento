@@ -2,13 +2,14 @@ import { LocalDatabase } from '../storage/localDatabase';
 import { AISettings, AppSettings, UserProfile } from '../../types';
 import { aiSettingsSchema } from '../../validators/schemas';
 import { AuditService } from '../audit/auditService';
+import { CloudSyncService } from '../api/cloudSyncService';
 
 export class SettingsService {
   static getAISettings(): AISettings {
     return LocalDatabase.getAISettings();
   }
 
-  static updateAISettings(currentUser: UserProfile, data: Partial<AISettings>): AISettings {
+  static async updateAISettings(currentUser: UserProfile, data: Partial<AISettings>): Promise<AISettings> {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem alterar configurações.');
     }
@@ -32,6 +33,7 @@ export class SettingsService {
     });
 
     LocalDatabase.saveAISettings(updated);
+    await CloudSyncService.syncSettings(updated, undefined);
 
     AuditService.logSystemAction(
       currentUser.id,
@@ -129,7 +131,7 @@ export class SettingsService {
     return LocalDatabase.getAppSettings();
   }
 
-  static updateAppSettings(currentUser: UserProfile, data: Partial<AppSettings>): AppSettings {
+  static async updateAppSettings(currentUser: UserProfile, data: Partial<AppSettings>): Promise<AppSettings> {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem alterar configurações gerais.');
     }
@@ -137,6 +139,7 @@ export class SettingsService {
     const current = LocalDatabase.getAppSettings();
     const updated = { ...current, ...data };
     LocalDatabase.saveAppSettings(updated);
+    await CloudSyncService.syncSettings(undefined, updated);
 
     AuditService.logSystemAction(
       currentUser.id,

@@ -65,20 +65,18 @@ export const AtendentesPage: React.FC = () => {
     setIsSaving(true);
     try {
       if (editingAttendant) {
-        const updated = AttendantService.update(user, editingAttendant.id, {
+        await AttendantService.update(user, editingAttendant.id, {
           name,
           code,
           active,
         });
-        await CloudSyncService.syncAttendant(updated);
         showToast('Atendente atualizado com sucesso.', 'success');
       } else {
-        const created = AttendantService.create(user, {
+        await AttendantService.create(user, {
           name,
           code,
           active,
         });
-        await CloudSyncService.syncAttendant(created);
         showToast('Atendente cadastrado com sucesso.', 'success');
       }
       setIsModalOpen(false);
@@ -94,8 +92,7 @@ export const AtendentesPage: React.FC = () => {
   const handleToggleStatus = async (attendant: Attendant) => {
     if (!user || !isAdmin) return;
     try {
-      const updated = AttendantService.toggleStatus(user, attendant.id);
-      await CloudSyncService.syncAttendant(updated);
+      await AttendantService.toggleStatus(user, attendant.id);
       showToast(
         `Atendente ${attendant.name} foi ${attendant.active ? 'desativado' : 'reativado'}.`,
         'info'
@@ -111,8 +108,7 @@ export const AtendentesPage: React.FC = () => {
     if (!user || !isAdmin || !deletingAttendant) return;
     setIsDeleting(true);
     try {
-      AttendantService.delete(user, deletingAttendant.id);
-      await CloudSyncService.deleteAttendant(deletingAttendant.id);
+      await AttendantService.delete(user, deletingAttendant.id);
       showToast(`Atendente ${deletingAttendant.name} excluído com sucesso do banco de dados.`, 'info', 'Exclusão Concluída');
       setDeletingAttendant(null);
       loadAttendants();

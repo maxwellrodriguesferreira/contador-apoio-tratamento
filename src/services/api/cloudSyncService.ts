@@ -1,6 +1,6 @@
 import { apiRequest } from './cloudflareClient';
 import { LocalDatabase } from '../storage/localDatabase';
-import { Attendant, Goal, TreatmentSupport, TreatmentSupportAudit, UserProfile, AuditLog } from '../../types';
+import { Attendant, Goal, TreatmentSupport, TreatmentSupportAudit, UserProfile, AuditLog, AISettings, AppSettings } from '../../types';
 
 type DataChangeListener = () => void;
 
@@ -103,6 +103,26 @@ export class CloudSyncService {
         console.warn('Aviso ao sincronizar logs de auditoria do Cloudflare D1:', e);
       }
 
+      // 7. Sincronizar Configurações Globais e IA
+      try {
+        const cloudSettings = await apiRequest<{
+          aiSettings?: Partial<AISettings>;
+          appSettings?: Partial<AppSettings>;
+        }>('/settings');
+        if (cloudSettings) {
+          if (cloudSettings.aiSettings) {
+            const currentAi = LocalDatabase.getAISettings();
+            LocalDatabase.saveAISettings({ ...currentAi, ...cloudSettings.aiSettings });
+          }
+          if (cloudSettings.appSettings) {
+            const currentApp = LocalDatabase.getAppSettings();
+            LocalDatabase.saveAppSettings({ ...currentApp, ...cloudSettings.appSettings });
+          }
+        }
+      } catch (e) {
+        console.warn('Aviso ao sincronizar configurações do Cloudflare D1:', e);
+      }
+
       console.info('✓ Sincronização com o Cloudflare D1 concluída com sucesso.');
       this.notifyDataChanged();
     } catch (e) {
@@ -121,6 +141,7 @@ export class CloudSyncService {
       });
     } catch (e) {
       console.warn('Erro ao sincronizar atendente no Cloudflare D1:', e);
+      throw e;
     }
   }
 
@@ -129,6 +150,7 @@ export class CloudSyncService {
       await apiRequest<{ success: boolean }>(`/attendants/${id}`, 'DELETE');
     } catch (e) {
       console.warn('Erro ao excluir atendente no Cloudflare D1:', e);
+      throw e;
     }
   }
 
@@ -145,6 +167,7 @@ export class CloudSyncService {
       }
     } catch (e) {
       console.warn('Erro ao sincronizar apoio no Cloudflare D1:', e);
+      throw e;
     }
   }
 
@@ -155,6 +178,7 @@ export class CloudSyncService {
       });
     } catch (e) {
       console.warn('Erro ao sincronizar meta no Cloudflare D1:', e);
+      throw e;
     }
   }
 
@@ -163,6 +187,7 @@ export class CloudSyncService {
       await apiRequest<{ success: boolean }>(`/goals/${id}`, 'DELETE');
     } catch (e) {
       console.warn('Erro ao excluir meta no Cloudflare D1:', e);
+      throw e;
     }
   }
 
@@ -173,6 +198,7 @@ export class CloudSyncService {
       });
     } catch (e) {
       console.warn('Erro ao sincronizar usuário no Cloudflare D1:', e);
+      throw e;
     }
   }
 
@@ -181,6 +207,7 @@ export class CloudSyncService {
       await apiRequest<{ success: boolean }>(`/users/${id}`, 'DELETE');
     } catch (e) {
       console.warn('Erro ao excluir usuário no Cloudflare D1:', e);
+      throw e;
     }
   }
 
@@ -201,18 +228,22 @@ export class CloudSyncService {
   }
 
   static async clearAuditLogs(): Promise<void> {
-    try {
-      await apiRequest<{ success: boolean }>('/audit/logs', 'DELETE');
-    } catch (e) {
-      console.warn('Erro ao limpar logs de auditoria no Cloudflare D1:', e);
-    }
+    await apiRequest<{ success: boolean }>('/audit/logs', 'DELETE');
   }
 
   static async clearSupportAudits(): Promise<void> {
+    await apiRequest<{ success: boolean }>('/audit/supports', 'DELETE');
+  }
+
+  static async syncSettings(
+    aiSettings?: Partial<AISettings>,
+    appSettings?: Partial<AppSettings>
+  ): Promise<void> {
     try {
-      await apiRequest<{ success: boolean }>('/audit/supports', 'DELETE');
+      await apiRequest<{ success: boolean }>('/settings', 'PUT', { aiSettings, appSettings });
     } catch (e) {
-      console.warn('Erro ao limpar auditoria de apoios no Cloudflare D1:', e);
+      console.warn('Erro ao sincronizar configurações no Cloudflare D1:', e);
+      throw e;
     }
   }
 }

@@ -98,7 +98,7 @@ export const ConfiguracoesPage: React.FC = () => {
     if (!user || !isAdmin) return;
 
     try {
-      const updated = SettingsService.updateAISettings(user, aiSettings);
+      const updated = await SettingsService.updateAISettings(user, aiSettings);
       setAiSettings(updated);
       showToast('Configurações de Inteligência Artificial salvas com sucesso.', 'success');
     } catch (err: unknown) {
@@ -113,7 +113,7 @@ export const ConfiguracoesPage: React.FC = () => {
 
     setIsSavingGeneral(true);
     try {
-      const updated = SettingsService.updateAppSettings(user, appSettings);
+      const updated = await SettingsService.updateAppSettings(user, appSettings);
       setAppSettings(updated);
       showToast('Configurações gerais atualizadas com sucesso.', 'success');
     } catch (err: unknown) {
