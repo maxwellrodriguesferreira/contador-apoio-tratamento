@@ -376,14 +376,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               </div>
             </div>
           </div>
-                <span className="text-xs text-emerald-800 ml-1 font-medium">hoje ({consolidatedMetrics.todayTreatmentSupport} + {consolidatedMetrics.todayRoutineCare})</span>
-              </div>
-              <div className="text-right">
-                <span className="text-lg font-extrabold text-emerald-700">{consolidatedMetrics.monthTotalServices}</span>
-                <span className="text-xs text-emerald-800 ml-1 font-medium">no mês</span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
