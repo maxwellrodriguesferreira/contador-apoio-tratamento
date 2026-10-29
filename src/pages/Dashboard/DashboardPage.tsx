@@ -665,6 +665,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 </button>
               </div>
             </div>
+          </div>
+
           {/* Barra explicativa da regra de negócio e formato dos valores */}
           <div className="px-5 py-2.5 bg-surface-container-low/70 border-b border-outline-variant/20 flex flex-wrap items-center justify-between gap-2 text-xs">
             <div className="flex items-center gap-1.5 text-on-surface-variant flex-wrap">
