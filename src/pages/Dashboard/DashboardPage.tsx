@@ -250,16 +250,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
             Atualizar Dados
           </Button>
 
-          {/* Ação Primária para ADMIN */}
+          {/* Ações Primárias para ADMIN */}
           {isAdmin && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => onNavigate('registrar-apoio')}
-              icon="add_circle"
-            >
-              Novo Apoio
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => onNavigate('registrar-apoio')}
+                icon="health_and_safety"
+              >
+                Novo Apoio
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => onNavigate('registrar-rotina')}
+                icon="assignment_turned_in"
+              >
+                Novo Na Rotina
+              </Button>
+            </div>
           )}
         </div>
       </div>

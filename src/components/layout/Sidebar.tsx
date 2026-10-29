@@ -18,7 +18,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const adminNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { id: 'registrar-apoio', label: 'Registrar Apoio', icon: 'assignment_turned_in' },
+    { id: 'registrar-apoio', label: 'Registrar Apoio', icon: 'health_and_safety' },
+    { id: 'registrar-rotina', label: 'Registrar Na Rotina', icon: 'assignment_turned_in' },
     { id: 'lancamentos', label: 'Lançamentos', icon: 'medication' },
     { id: 'atendentes', label: 'Atendentes', icon: 'support_agent' },
     { id: 'metas', label: 'Metas', icon: 'track_changes' },

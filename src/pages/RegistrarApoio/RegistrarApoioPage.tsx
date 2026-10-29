@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { SupportService } from '../../services/supports/supportService';
-import { RoutineService } from '../../services/routine/routineService';
 import { AttendantService } from '../../services/attendants/attendantService';
 import { Attendant } from '../../types';
 import { getTodayISODate } from '../../utils/calculations';
@@ -19,7 +18,6 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
   const { user, isAdmin } = useAuth();
   const { showToast } = useToast();
 
-  const [serviceType, setServiceType] = useState<'APOIO' | 'ROTINA'>('APOIO');
   const [date, setDate] = useState<string>(getTodayISODate());
   const [attendantId, setAttendantId] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
@@ -51,7 +49,7 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !isAdmin) {
-      showToast('Apenas administradores podem registrar novos atendimentos.', 'error');
+      showToast('Apenas administradores podem registrar novos apoios.', 'error');
       return;
     }
 
@@ -71,41 +69,30 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
       await new Promise((r) => setTimeout(r, 450));
 
       const selectedAttendant = activeAttendants.find((a) => a.id === attendantId);
-      const serviceName = serviceType === 'APOIO' ? 'Apoio ao Tratamento' : 'Na Rotina';
 
-      if (serviceType === 'APOIO') {
-        await SupportService.create(user, {
-          date,
-          attendantId,
-          quantity,
-          observation: observation.trim() || undefined,
-        });
-      } else {
-        await RoutineService.create(user, {
-          date,
-          attendantId,
-          quantity,
-          observation: observation.trim() || undefined,
-        });
-      }
+      await SupportService.create(user, {
+        date,
+        attendantId,
+        quantity,
+        observation: observation.trim() || undefined,
+      });
 
-      showToast(`✓ ${serviceName} registrado com sucesso.`, 'success', 'Lançamento Concluído');
+      showToast('✓ Apoio ao Tratamento registrado com sucesso.', 'success', 'Lançamento Concluído');
 
       setLastSavedInfo(
-        `Último registro: ${quantity} ${serviceName} para ${selectedAttendant?.name} na data ${date}.`
+        `Último registro: ${quantity} apoio(s) para ${selectedAttendant?.name} na data ${date}.`
       );
 
       // Limpar somente quantidade (volta para 1) e observação; MANTER data e atendente
       setQuantity(1);
       setObservation('');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Erro ao registrar atendimento.';
+      const msg = err instanceof Error ? err.message : 'Erro ao registrar apoio.';
       showToast(msg, 'error', 'Falha no Registro');
     } finally {
       setIsSubmitting(false);
     }
   };
-
 
   if (!isAdmin) {
     return (
@@ -126,9 +113,12 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
       {/* Cabeçalho da Página */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface tracking-tight">Registrar Apoio</h1>
+          <h1 className="text-2xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[28px] text-primary">health_and_safety</span>
+            Registrar Apoio ao Tratamento
+          </h1>
           <p className="text-xs text-on-surface-variant mt-1">
-            Lançamento de Apoios ao Tratamento vinculados aos atendentes farmacêuticos
+            Lançamento de Apoios ao Tratamento farmacêutico vinculados a metas diárias e mensais
           </p>
         </div>
         <Button
@@ -159,47 +149,9 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-          {/* Seletor do Tipo de Serviço */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-              Tipo de Serviço Farmacêutico <span className="text-error">*</span>
-            </label>
-            <div className="grid grid-cols-2 gap-3 p-1 bg-surface-container-low rounded-xl border border-outline-variant/30">
-              <button
-                type="button"
-                onClick={() => setServiceType('APOIO')}
-                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
-                  serviceType === 'APOIO'
-                    ? 'bg-primary text-on-primary shadow-sm'
-                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[18px]">health_and_safety</span>
-                Apoio ao Tratamento
-              </button>
-              <button
-                type="button"
-                onClick={() => setServiceType('ROTINA')}
-                className={`flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
-                  serviceType === 'ROTINA'
-                    ? 'bg-secondary text-on-secondary shadow-sm'
-                    : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container'
-                }`}
-              >
-                <span className="material-symbols-outlined text-[18px]">assignment_turned_in</span>
-                Na Rotina
-              </button>
-            </div>
-            <span className="text-[11px] text-outline">
-              {serviceType === 'APOIO'
-                ? 'Acompanhamento farmacoterapêutico de adesão (possui metas diárias e mensais).'
-                : 'Atendimento clínico e operacional de balcão (sem metas obrigatórias).'}
-            </span>
-          </div>
-
           {/* Data do Lançamento */}
           <Input
-            label={serviceType === 'APOIO' ? 'Data do Apoio' : 'Data do Atendimento'}
+            label="Data do Apoio"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
@@ -227,8 +179,7 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
           {/* Campo de Quantidade com Botões Rápidos */}
           <div className="flex flex-col gap-2">
             <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-              {serviceType === 'APOIO' ? 'Quantidade de Apoios' : 'Quantidade de Atendimentos Na Rotina'}{' '}
-              <span className="text-error">*</span>
+              Quantidade de Apoios <span className="text-error">*</span>
             </label>
             <div className="flex items-center gap-2">
               <button
@@ -285,27 +236,23 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
               rows={3}
               value={observation}
               onChange={(e) => setObservation(e.target.value)}
-              placeholder={
-                serviceType === 'APOIO'
-                  ? 'Ex.: Cliente orientado sobre adesão e posologia farmacêutica...'
-                  : 'Ex.: Atendimento de rotina clínica realizado no balcão...'
-              }
+              placeholder="Ex.: Cliente orientado sobre adesão e posologia farmacêutica..."
               className="w-full p-3 rounded-lg bg-surface-container-lowest border border-outline-variant/50 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
 
-          {/* Botão de Submissão com prevenção contra duplo clique */}
+          {/* Botão de Submissão */}
           <div className="pt-3">
             <Button
               type="submit"
-              variant={serviceType === 'APOIO' ? 'primary' : 'secondary'}
+              variant="primary"
               size="lg"
               className="w-full"
               isLoading={isSubmitting}
               loadingText="Salvando..."
-              icon={serviceType === 'APOIO' ? 'health_and_safety' : 'assignment_turned_in'}
+              icon="health_and_safety"
             >
-              {serviceType === 'APOIO' ? 'Registrar Apoio ao Tratamento' : 'Registrar Na Rotina'}
+              Registrar Apoio ao Tratamento
             </Button>
           </div>
         </form>
