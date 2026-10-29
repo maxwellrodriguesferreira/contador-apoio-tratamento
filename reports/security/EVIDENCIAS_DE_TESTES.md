@@ -92,9 +92,9 @@ Test Files  4 passed (4)
 ### 3.1. Arquivo de Orquestração (`docker-compose.watchtower.yaml`)
 * **Verificação Pré-Correção:**
   ```yaml
-  - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-cfut_fn1ipsv0...}
-  - GEMINI_API_KEY=${GEMINI_API_KEY:-AQ.Ab8RN6Jc...}
-  - REDIS_URL=${REDIS_URL:-rediss://default:gQAAAAAAA6...}
+  - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-cfut_[REDACTED]}
+  - GEMINI_API_KEY=${GEMINI_API_KEY:-AQ.[REDACTED]}
+  - REDIS_URL=${REDIS_URL:-rediss://default:[REDACTED]}
   ```
 * **Verificação Pós-Correção:**
   ```yaml

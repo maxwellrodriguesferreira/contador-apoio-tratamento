@@ -381,8 +381,8 @@ NODE_ENV=production
 
 # Banco de Dados Cloudflare D1 (Produção)
 # (Se omitido, o sistema opera automaticamente com o SQLite local persistido em /app/data)
-CLOUDFLARE_ACCOUNT_ID=ef579acea3be117e010eafc168ca1c2f
-CLOUDFLARE_DATABASE_ID=9e9cb6e6-6981-4357-9c76-acaff75f7377
+CLOUDFLARE_ACCOUNT_ID=seu_account_id_cloudflare_aqui
+CLOUDFLARE_DATABASE_ID=seu_database_id_uuid_aqui
 CLOUDFLARE_API_TOKEN=seu_token_api_cloudflare_aqui
 
 # Inteligência Artificial Google Gemini

@@ -10,7 +10,7 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: maxwellferreira@proton.me
+    email: admin@suadrogaria.com.br
     privateKeySecretRef:
       name: letsencrypt-account-key
     solvers:
