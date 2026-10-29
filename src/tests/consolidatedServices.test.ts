@@ -3,6 +3,7 @@ import {
   calculateConsolidatedMetrics,
   calculateConsolidatedAttendantsPerformance,
   calculateTeamServicesTotal,
+  calculateDailyServicesEvolution,
   filterValidRecords,
   calculateDashboardMetrics,
   getActiveGoal,
@@ -377,4 +378,46 @@ describe('Suíte de Testes: Totalizador Geral de Serviços Farmacêuticos (Apoio
     expect(sortedByRoutine[1].attendantId).toBe('att-b');
     expect(sortedByRoutine[2].attendantId).toBe('att-c');
   });
+
+  it('11. Deve calcular a Evolução Diária separando Apoio ao Tratamento e Na Rotina com Total Geral', () => {
+    const supports: TreatmentSupport[] = [
+      { ...mockSupports[0], date: '2026-09-01', quantity: 10 },
+      { ...mockSupports[1], date: '2026-09-02', quantity: 15 },
+      { ...mockSupports[2], date: '2026-09-02', quantity: 5 },
+      // Registro excluído não deve ser somado
+      { ...mockSupports[0], id: 'sup-del', date: '2026-09-02', quantity: 99, deletedAt: '2026-09-02' },
+    ];
+
+    const routines: RoutineCare[] = [
+      { ...mockRoutines[0], date: '2026-09-01', quantity: 20 },
+      { ...mockRoutines[1], date: '2026-09-02', quantity: 25 },
+      { ...mockRoutines[2], date: '2026-09-03', quantity: 30 },
+      // Registro excluído não deve ser somado
+      { ...mockRoutines[0], id: 'rot-del', date: '2026-09-01', quantity: 50, deletedAt: '2026-09-01' },
+    ];
+
+    const evolution = calculateDailyServicesEvolution(supports, routines, '2026-09-03', 12);
+
+    expect(evolution.length).toBe(3);
+
+    // Dia 01/09: Apoio 10, Rotina 20 -> Total 30
+    expect(evolution[0].dia).toBe('01/09');
+    expect(evolution[0].apoios).toBe(10);
+    expect(evolution[0].rotinas).toBe(20);
+    expect(evolution[0].totalGeral).toBe(30);
+    expect(evolution[0].meta).toBe(12);
+
+    // Dia 02/09: Apoio 20 (15+5), Rotina 25 -> Total 45
+    expect(evolution[1].dia).toBe('02/09');
+    expect(evolution[1].apoios).toBe(20);
+    expect(evolution[1].rotinas).toBe(25);
+    expect(evolution[1].totalGeral).toBe(45);
+
+    // Dia 03/09: Apoio 0, Rotina 30 -> Total 30
+    expect(evolution[2].dia).toBe('03/09');
+    expect(evolution[2].apoios).toBe(0);
+    expect(evolution[2].rotinas).toBe(30);
+    expect(evolution[2].totalGeral).toBe(30);
+  });
 });
+

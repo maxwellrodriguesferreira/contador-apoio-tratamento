@@ -431,3 +431,58 @@ export function calculateConsolidatedAttendantsPerformance(
   }));
 }
 
+export interface DailyServicesEvolutionItem {
+  dia: string;
+  dateKey: string;
+  apoios: number;
+  rotinas: number;
+  totalGeral: number;
+  meta: number;
+}
+
+/**
+ * Calcula a evolução diária no mês separando:
+ * - Apoio ao Tratamento
+ * - Na Rotina
+ * - Total Geral (Apoio + Na Rotina)
+ * - Meta Diária Fixa (para referência de Apoio ao Tratamento)
+ */
+export function calculateDailyServicesEvolution(
+  supports: TreatmentSupport[],
+  routines: RoutineCare[],
+  selectedDate: string = getTodayISODate(),
+  todayGoal: number = 0
+): DailyServicesEvolutionItem[] {
+  const validSupports = filterValidRecords(supports);
+  const validRoutines = filterValidRecords(routines);
+
+  const targetMonth = selectedDate.substring(0, 7);
+  const parts = selectedDate.split('-');
+  const currentDay = parseInt(parts[2], 10) || 1;
+
+  const data: DailyServicesEvolutionItem[] = [];
+  for (let day = 1; day <= currentDay; day++) {
+    const dayStr = String(day).padStart(2, '0');
+    const dateKey = `${targetMonth}-${dayStr}`;
+
+    const dayApoios = validSupports
+      .filter((s) => s.date === dateKey)
+      .reduce((acc, curr) => acc + curr.quantity, 0);
+
+    const dayRotinas = validRoutines
+      .filter((r) => r.date === dateKey)
+      .reduce((acc, curr) => acc + curr.quantity, 0);
+
+    data.push({
+      dia: `${dayStr}/${targetMonth.substring(5, 7)}`,
+      dateKey,
+      apoios: dayApoios,
+      rotinas: dayRotinas,
+      totalGeral: dayApoios + dayRotinas,
+      meta: todayGoal,
+    });
+  }
+
+  return data;
+}
+

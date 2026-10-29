@@ -13,6 +13,7 @@ import {
   calculateConsolidatedMetrics,
   calculateConsolidatedAttendantsPerformance,
   calculateTeamServicesTotal,
+  calculateDailyServicesEvolution,
   formatDateBR,
   formatDateTimeBR,
   getTodayISODate,
@@ -118,28 +119,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const appSettings = useMemo(() => SettingsService.getAppSettings(), []);
 
 
-  // Dados para Gráfico de Evolução Diária (dias 1 até a data selecionada)
+  // Dados para Gráfico de Evolução Diária (separando Apoio ao Tratamento, Na Rotina e Total Geral)
   const dailyEvolutionChartData = useMemo(() => {
-    const targetMonth = selectedDate.substring(0, 7);
-    const parts = selectedDate.split('-');
-    const currentDay = parseInt(parts[2], 10) || 24;
-
-    const data = [];
-    for (let day = 1; day <= currentDay; day++) {
-      const dayStr = String(day).padStart(2, '0');
-      const dateKey = `${targetMonth}-${dayStr}`;
-      const dayTotal = supports
-        .filter((s) => !s.deletedAt && s.date === dateKey)
-        .reduce((acc, curr) => acc + curr.quantity, 0);
-
-      data.push({
-        dia: `${dayStr}/${targetMonth.substring(5, 7)}`,
-        apoios: dayTotal,
-        meta: metrics.todayGoal,
-      });
-    }
-    return data;
-  }, [supports, selectedDate, metrics.todayGoal]);
+    return calculateDailyServicesEvolution(supports, routines, selectedDate, metrics.todayGoal);
+  }, [supports, routines, selectedDate, metrics.todayGoal]);
 
   // Dados para Gráfico de Apoios por Atendente
   const attendantsChartData = useMemo(() => {
@@ -504,14 +487,28 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
 
       {/* Gráficos em Linha e Barras */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Gráfico 1: Evolução Diária no Mês */}
+        {/* Gráfico 1: Evolução Diária no Mês (Separando Apoio e Na Rotina) */}
         <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-subtle p-5">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
             <div>
-              <h3 className="font-bold text-base text-on-surface">Evolução Diária de Apoios</h3>
+              <h3 className="font-bold text-base text-on-surface">Evolução Diária de Apoios e Na Rotina</h3>
               <p className="text-xs text-on-surface-variant">
-                Comparativo diário de apoios realizados vs meta diária ({metrics.todayGoal})
+                Comparativo diário entre Apoio ao Tratamento, Na Rotina e meta diária ({metrics.todayGoal})
               </p>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] font-semibold">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-primary">
+                <span className="w-2 h-2 rounded-full bg-[#00236f] inline-block"></span>
+                Apoio: {consolidatedMetrics.todayTreatmentSupport}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary/15 text-secondary">
+                <span className="w-2 h-2 rounded-full bg-[#006398] inline-block"></span>
+                Rotina: {consolidatedMetrics.todayRoutineCare}
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">
+                <span className="w-2 h-2 rounded-full bg-[#059669] inline-block"></span>
+                Total: {consolidatedMetrics.todayTotalServices}
+              </span>
             </div>
           </div>
           <div className="h-72 w-full">
@@ -521,6 +518,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 <XAxis dataKey="dia" stroke="#757682" fontSize={11} />
                 <YAxis stroke="#757682" fontSize={11} />
                 <Tooltip
+                  formatter={(value: number, name: string) => [
+                    `${value} ${name.includes('Meta') ? 'apoios (meta)' : 'registros'}`,
+                    name,
+                  ]}
                   contentStyle={{
                     backgroundColor: '#ffffff',
                     borderRadius: '8px',
@@ -532,7 +533,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 <Line
                   type="monotone"
                   dataKey="apoios"
-                  name="Apoios Realizados"
+                  name="Apoio ao Tratamento"
                   stroke="#00236f"
                   strokeWidth={3}
                   dot={{ r: 3, fill: '#00236f' }}
@@ -540,8 +541,27 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 />
                 <Line
                   type="monotone"
+                  dataKey="rotinas"
+                  name="Na Rotina"
+                  stroke="#006398"
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: '#006398' }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="totalGeral"
+                  name="Total Geral (Apoio + Rotina)"
+                  stroke="#059669"
+                  strokeWidth={2}
+                  strokeDasharray="4 2"
+                  dot={{ r: 2.5, fill: '#059669' }}
+                  activeDot={{ r: 5 }}
+                />
+                <Line
+                  type="monotone"
                   dataKey="meta"
-                  name="Meta Diária Fixa"
+                  name="Meta Diária Fixa (Apoio)"
                   stroke="#d97706"
                   strokeDasharray="5 5"
                   strokeWidth={2}
@@ -645,6 +665,26 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 </button>
               </div>
             </div>
+          {/* Barra explicativa da regra de negócio e formato dos valores */}
+          <div className="px-5 py-2.5 bg-surface-container-low/70 border-b border-outline-variant/20 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="flex items-center gap-1.5 text-on-surface-variant flex-wrap">
+              <span className="material-symbols-outlined text-[16px] text-emerald-700">calculate</span>
+              <span className="font-bold text-on-surface">Fórmula do Totalizador:</span>
+              <span className="inline-flex items-center gap-1 font-semibold text-primary">
+                Apoio ao Tratamento
+              </span>
+              <span className="text-outline font-bold">+</span>
+              <span className="inline-flex items-center gap-1 font-semibold text-secondary">
+                Na Rotina
+              </span>
+              <span className="text-outline font-bold">=</span>
+              <span className="inline-flex items-center gap-1 font-extrabold text-emerald-700">
+                Total Geral de Serviços
+              </span>
+            </div>
+            <div className="text-[11px] text-outline">
+              Valores exibidos: <strong className="text-on-surface">Acumulado no Mês</strong> (<span className="text-outline">hoje</span>)
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -657,15 +697,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">
                     <span className="text-primary font-bold">Apoio</span>
-                    <span className="text-[10px] text-outline block normal-case font-normal">Hoje / Mês</span>
+                    <span className="text-[10px] text-outline block normal-case font-normal">Mês / (Hoje)</span>
                   </th>
                   <th className="px-4 py-3 text-right">
                     <span className="text-secondary font-bold">Na Rotina</span>
-                    <span className="text-[10px] text-outline block normal-case font-normal">Hoje / Mês</span>
+                    <span className="text-[10px] text-outline block normal-case font-normal">Mês / (Hoje)</span>
                   </th>
                   <th className="px-4 py-3 text-right bg-emerald-500/5">
-                    <span className="text-emerald-800 font-extrabold">Total Geral</span>
-                    <span className="text-[10px] text-emerald-700/80 block normal-case font-medium">Hoje / Mês</span>
+                    <span className="text-emerald-800 font-extrabold flex items-center justify-end gap-1">
+                      <span>Total Geral</span>
+                      <span className="material-symbols-outlined text-[14px] text-emerald-600" title="Apoio ao Tratamento + Na Rotina">functions</span>
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-bold block normal-case">Apoio + Rotina</span>
                   </th>
                   <th className="px-4 py-3 text-right">Participação</th>
                 </tr>
@@ -742,13 +785,18 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                           <span className="text-[10px] text-outline">({item.routineCareToday} hoje)</span>
                         </div>
                       </td>
-                      {/* Total Geral de Serviços */}
-                      <td className="px-4 py-3 text-right bg-emerald-500/5">
+                      {/* Total Geral de Serviços (Soma de Apoio + Na Rotina) */}
+                      <td
+                        className="px-4 py-3 text-right bg-emerald-500/5"
+                        title={`Total Geral: ${item.treatmentSupportMonth} (Apoio) + ${item.routineCareMonth} (Na Rotina) = ${item.totalServicesMonth} serviços no mês`}
+                      >
                         <div className="flex flex-col items-end">
                           <span className="font-extrabold text-emerald-800 text-sm">
                             {item.totalServicesMonth}
                           </span>
-                          <span className="text-[10px] text-emerald-700/80">({item.totalServicesToday} hoje)</span>
+                          <span className="text-[10px] text-emerald-700/80 font-medium">
+                            ({item.totalServicesToday} hoje)
+                          </span>
                         </div>
                       </td>
                       {/* Participação */}
@@ -768,8 +816,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                   <tr>
                     <td colSpan={4} className="px-4 py-3.5 uppercase tracking-wider text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[18px] text-emerald-700">groups</span>
-                        <span className="text-on-surface font-extrabold">TOTAL DA EQUIPE</span>
+                        <span className="material-symbols-outlined text-[20px] text-emerald-700">groups</span>
+                        <div>
+                          <span className="text-on-surface font-extrabold block">TOTAL DA EQUIPE</span>
+                          <span className="text-[10px] text-outline normal-case font-normal">
+                            Soma: {teamTotal.treatmentSupportMonth} Apoios + {teamTotal.routineCareMonth} Na Rotina = {teamTotal.totalServicesMonth} Serviços
+                          </span>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3.5 text-right text-primary font-bold text-sm">
@@ -780,9 +833,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                       <div>{teamTotal.routineCareMonth}</div>
                       <span className="text-[10px] font-normal text-outline">({teamTotal.routineCareToday} hoje)</span>
                     </td>
-                    <td className="px-4 py-3.5 text-right bg-emerald-500/10 text-emerald-900 font-extrabold text-base">
-                      <div>{teamTotal.totalServicesMonth}</div>
-                      <span className="text-[10px] font-medium text-emerald-800">({teamTotal.totalServicesToday} hoje)</span>
+                    <td
+                      className="px-4 py-3.5 text-right bg-emerald-500/10 text-emerald-900 font-extrabold text-base"
+                      title={`Total da Equipe: ${teamTotal.treatmentSupportMonth} Apoios + ${teamTotal.routineCareMonth} Na Rotina = ${teamTotal.totalServicesMonth} Serviços no mês`}
+                    >
+                      <div className="text-emerald-900 font-black">{teamTotal.totalServicesMonth}</div>
+                      <span className="text-[10px] font-semibold text-emerald-800">
+                        ({teamTotal.totalServicesToday} hoje)
+                      </span>
                     </td>
                     <td className="px-4 py-3.5 text-right">
                       <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-extrabold text-[11px]">
