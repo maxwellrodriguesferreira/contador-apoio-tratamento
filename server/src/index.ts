@@ -18,6 +18,25 @@ import aiRouter from './routes/ai.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Carregamento resiliente de variáveis locais (.env) fora de contêineres Docker
+if (typeof process.loadEnvFile === 'function') {
+  const envCandidates = [
+    path.resolve(process.cwd(), '.env'),
+    path.resolve(process.cwd(), '../.env'),
+    path.resolve(__dirname, '../../.env'),
+  ];
+  for (const p of envCandidates) {
+    if (fs.existsSync(p)) {
+      try {
+        process.loadEnvFile(p);
+        break;
+      } catch {
+        // Ignora erro se já estiver carregado pelo runtime
+      }
+    }
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
