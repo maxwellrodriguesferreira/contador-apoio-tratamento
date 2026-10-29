@@ -1,300 +1,117 @@
-# Apoio ao Tratamento — Gestão Clínica, Metas & Inteligência Operacional
+# Apoio ao Tratamento — Gestão Clínica, Metas & IA Operacional
 
-Sistema corporativo de alto desempenho projetado para drogarias e redes farmacêuticas para registro, acompanhamento terapêutico, auditoria imutável, cálculo determinístico de metas e análise preditiva por Inteligência Artificial (Google Gemini) de **Apoios ao Tratamento**.
+> Sistema corporativo de alta performance voltado a drogarias e redes farmacêuticas para registro de orientações clínicas, acompanhamento terapêutico, auditoria imutável, cálculo determinístico de metas e análise preditiva com Google Gemini.
 
-Construído com arquitetura moderna e conteinerizada em **Contêiner Único (*Single Container*)** via **Docker & Docker Compose**, suporte nativo ao banco de dados relacional **Cloudflare D1** (Edge SQL), integração à rede Docker compartilhada **`rede-proxy`** com **Nginx Proxy Manager** e publicação de imagens no **Docker Hub**.
-
----
-
-> 📖 **Guias de Deploy e Orquestração**:
-> * **Deploy Contínuo (CI/CD & Watchtower)**: Consulte o guia completo 👉 **[README_CICD_WATCHTOWER.md](README_CICD_WATCHTOWER.md)** para automação contínua via GitHub Actions, Docker Hub e Raspberry Pi 4 / VPS.
-> * **Docker & VPS (Nginx Proxy Manager)**: Consulte o manual dedicado 👉 **[MANUAL_DEPLOY_VPS_NPM.md](MANUAL_DEPLOY_VPS_NPM.md)** *(ou o PDF complementar `MANUAL_DEPLOY_VPS_NPM.pdf`)*.
-> * **Kubernetes (K8s)**: Para orquestração em clusters Kubernetes (k3s, EKS, GKE, AKS, Vanilla), consulte os manifestos e guia 👉 **[k8s/README.md](k8s/README.md)**.
+[![Docker Image](https://img.shields.io/badge/docker-single_container-blue.svg)](Dockerfile)
+[![Node.js](https://img.shields.io/badge/node.js-24_alpine-green.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/react-18-61dafb.svg)](https://react.dev/)
+[![Database](https://img.shields.io/badge/database-Cloudflare_D1_%7C_SQLite-orange.svg)](https://developers.cloudflare.com/d1/)
+[![AI](https://img.shields.io/badge/AI-Google_Gemini_Flash-purple.svg)](https://ai.google.dev/)
+[![Tests](https://img.shields.io/badge/tests-Vitest-yellow.svg)](vitest.config.ts)
 
 ---
 
-## 1. Visão Geral e Conceito de Domínio
+## 🚀 Funcionalidades do Sistema
 
-Um **Apoio ao Tratamento** representa a orientação e inclusão de um paciente em acompanhamento farmacoterapêutico (ex: adesão a antimicrobianos, cronogramas de hipertensão e diabetes, pediatria ou cessação tabágica).
+O sistema centraliza a rotina de apoio terapêutico e acompanhamento clínico das lojas em uma interface moderna, rápida e intuitiva:
 
-### Separação Rigorosa de Papéis (RBAC):
-```text
-  ADMINISTRADOR (Acesso Total)
-        │
-        │ Registra, edita, exclui ou restaura apoios
-        ▼
-  Apoio ao Tratamento (Qtd: 10)
-        │
-        │ Vinculado operacionalmente a
-        ▼
-  Atendente Farmacêutico (João Silva)
-```
-
-* **USUÁRIO DO SISTEMA ≠ ATENDENTE**:
-  * **ADMIN**: Perfil com privilégio total para lançar, alterar, auditar e excluir apoios, além de configurar metas operacionais, gerenciar usuários, visualizar auditoria e executar diagnósticos por IA.
-  * **ATENDENTE**: Acesso restrito em modo **leitura** aos seus indicadores individuais no Dashboard e ao seu perfil.
+| Módulo / Funcionalidade | Descrição |
+| :--- | :--- |
+| 📊 **Dashboard em Tempo Real** | Visão instantânea de KPIs, total de apoios no dia/mês, termômetro clínico de progresso, projeção linear de metas e gráficos comparativos de desempenho por atendente e loja. |
+| ✍️ **Registro Rápido de Apoios** | Cadastro ágil de atendimentos clínicos e adesão farmacoterapêutica com validação estrita de integridade via Zod. |
+| 📋 **Gestão de Lançamentos** | Listagem completa com filtros temporais e por equipe, controle de concorrência otimista (`version`) e **Soft Delete** com capacidade de restauração imediata. |
+| 🎯 **Motor Determinístico de Metas** | Metas operacionais globais e individuais por atendente. O algoritmo calcula projeções e metas diárias excluindo automaticamente domingos e dias não trabalhados. |
+| 🛡️ **Auditoria Imutável (Audit Trail)** | Trilha detalhada de conformidade que registra usuário, data, ação e snapshots completos de estado anterior (`old_value`) e novo (`new_value`) para mutações (`CREATE`, `UPDATE`, `DELETE`, `RESTORE`). |
+| 🤖 **Inteligência Artificial (Google Gemini)** | Geração de pareceres analíticos, diagnósticos de aderência terapêutica e plano de voo com recomendações de melhoria. Possui cache determinístico (`input_hash`) e invalidação atômica ao alterar dados. |
+| 📈 **Relatórios & Exportação** | Painel de relatórios analíticos consolidados com exportação direta para planilhas Excel (`.xlsx`). |
+| 👥 **Gestão de Usuários & Equipe** | Cadastro de atendentes, controle de contas de acesso, ativação/inativação e redefinição de credenciais. |
+| ⚙️ **Configurações do Sistema** | Parametrização global de regras de cálculo, integração com a IA Gemini e personalização operacional. |
 
 ---
 
-## 2. Arquitetura Técnica e Stack Tecnológica (Single Container)
+## 🔐 Controle de Acesso (RBAC)
 
-A aplicação foi refatorada e unificada em um **único contêiner**, eliminando a necessidade de contêineres separados para frontend e backend, reduzindo o consumo de memória RAM na VPS e simplificando drasticamente a orquestração de rede.
+O sistema adota separação rigorosa entre quem atende e quem administra o sistema:
 
-```text
-                           INTERNET PÚBLICA / NAVEGADOR
-                                        │
-                                        ▼
-                        ┌───────────────────────────────┐
-                        │   NGINX PROXY MANAGER (Host)  │
-                        │   (Portas 80 / 443 com SSL)   │
-                        │        Rede: rede-proxy       │
-                        └───────────────┬───────────────┘
-                                        │ (http://contador-apoio-app:3000)
-                                        ▼
-       ╔═════════════════════════════════════════════════════════════════════╗
-       ║             CONTÊINER UNIFICADO: contador-apoio-app                 ║
-       ║                    (Node.js 24 Alpine / Porta 3000)                 ║
-       ║                                                                     ║
-       ║  ┌─────────────────────────┐       ┌─────────────────────────────┐  ║
-       ║  │      FRONTEND (SPA)     │       │        BACKEND (API)        │  ║
-       ║  │  • React 18 + Vite      │◄──────┤  • Express 4.x REST         │  ║
-       ║  │  • Tailwind CSS         │Static │  • Rotas: /api/*            │  ║
-       ║  │  • Cache de Assets (1y) │ Files │  • Headers de Segurança     │  ║
-       ║  │  • Roteamento SPA       │       │  • CORS & Body Parser 25MB  │  ║
-       ║  └─────────────────────────┘       └──────────────┬──────────────┘  ║
-       ╚════════════════════════════════════════════════════┼═════════════════╝
-                                                           │
-                                        ┌──────────────────┴──────────────────┐
-                                        │                                     │
-                                        ▼                                     ▼
-                           CLOUDFLARE D1 (Edge SQL)                   GOOGLE GEMINI API
-                        Dual Engine: Remote REST / Local              (gemini-3.6-flash)
-```
-
-### Tecnologias Utilizadas:
-* **Frontend Web**: React 18, TypeScript, Vite, Tailwind CSS, Recharts (gráficos interativos), Lucide Icons, Material Symbols, Zod (validação de schemas), XLSX (exportação Excel).
-* **Backend Integrado**: Node.js 24 Alpine, TypeScript, Express (servindo tanto os artefatos estáticos da SPA quanto os endpoints da API REST sob `/api/*`), CORS, Driver Dual Cloudflare D1 / SQLite nativo (`node:sqlite`).
-* **Banco de Dados (Cloudflare D1 Dual Engine)**:
-  * Motor relacional SQL com integridade ACID, chaves estrangeiras, concorrência otimista (`version`) e trilha de auditoria completa (`old_value` / `new_value`).
-  * **Modo Nuvem (Produção)**: Conexão direta via **Cloudflare D1 REST API** na borda (*Edge*).
-  * **Modo Local (Offline/Fallback)**: Engine nativa baseada em `node:sqlite` com volume persistente (`contador_apoio_d1_data`) em `/app/data`.
-  * Tabelas: `user_profiles`, `attendants`, `treatment_supports`, `treatment_support_audits`, `goals`, `ai_analyses`, `audit_logs`, `system_settings`.
-* **Inteligência Artificial (Google Gemini)**: Modelo `gemini-3.6-flash`, com parecer executivo, termômetro clínico, plano de voo operacional e cache determinístico por hash (`input_hash`).
-* **Conteinerização**: Docker Multi-stage Build em 3 estágios, Docker Compose, rede externa `rede-proxy` e execução segura com usuário não-root `node`.
+* **Administrador (`ADMIN`)**: Acesso total — registro e gestão de apoios, metas, auditoria, usuários, relatórios executivos, diagnóstico por IA e configurações.
+* **Atendente (`ATENDENTE`)**: Acesso restrito ao **Dashboard pessoal** (em modo apenas leitura) e ao próprio perfil para consulta de seus números individuais.
 
 ---
 
-## 3. Configuração de Ambiente (.env)
+## 🛠️ Stack Tecnológica
 
-O sistema utiliza o arquivo `.env` para carregar todas as variáveis de forma segura. O arquivo `.env` é protegido pelo `.gitignore` e **nunca é commitado nem empacotado na imagem Docker**.
+* **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, Lucide Icons, Recharts (gráficos) e Zod.
+* **Backend Integrado**: Node.js 24 Alpine, TypeScript, Express 4.x servindo a SPA e as rotas REST em `/api/*`.
+* **Banco de Dados (Dual Engine)**: **Cloudflare D1** (Edge SQL na nuvem) com fallback automático e persistente para **SQLite** nativo (`node:sqlite`).
+* **Inteligência Artificial**: **Google Gemini 3.6 Flash** com cache determinístico e cálculo estatístico prévio no backend.
+* **Arquitetura**: **Contêiner Único (*Single Container*)** leve, seguro (execução com usuário não-root `node`) e com zero dependência entre contêineres adicionais.
 
-Crie seu arquivo de ambiente a partir do modelo:
+---
+
+## ⚡ Início Rápido
+
+### 1. Clonar e Configurar Variáveis
 ```bash
+git clone https://github.com/maxwellrodriguesferreira/contador-apoio-tratamento.git
+cd contador-apoio-tratamento
 cp .env.example .env
 ```
 
-### Variáveis Suportadas:
+> Preencha as credenciais no `.env` (credenciais de Admin, chave Gemini opcional e chaves Cloudflare D1 caso use banco remoto). Se omitir as chaves da Cloudflare, o sistema opera automaticamente com o banco local persistido.
 
-| Variável | Obrigatória? | Descrição | Exemplo / Padrão |
-| :--- | :---: | :--- | :--- |
-| `DOCKER_SHARED_NETWORK` | Não | Nome da rede Docker compartilhada com o proxy Nginx | `rede-proxy` |
-| `APP_PORT` | Não | Porta de exposição da aplicação no host (se necessário) | `3000` |
-| `PORT` | Não | Porta interna do servidor no contêiner | `3000` |
-| `CLOUDFLARE_ACCOUNT_ID` | Produção | Account ID da conta no painel Cloudflare | `ef579acea...` |
-| `CLOUDFLARE_DATABASE_ID` | Produção | UUID do banco D1 criado na Cloudflare | `9e9cb6e6-...` |
-| `CLOUDFLARE_API_TOKEN` | Produção | Token de API com permissão *D1 Edit* | `cfut_...` |
-| `GEMINI_API_KEY` | Opcional | Chave da Google Gemini API (Google AI Studio) | `Chave AI Studio` |
-| `GEMINI_DEFAULT_MODEL` | Não | Identificador do modelo de IA | `gemini-3.6-flash` |
-| `ADMIN_EMAIL` | Sim | E-mail de login do Administrador Geral | `admin@suaempresa.com.br` |
-| `ADMIN_PASSWORD` | Sim | Senha forte de acesso do Administrador | `Definida no .env` |
-| `ATENDENTE_EMAIL` | Não | E-mail de login do Atendente padrão | `atendente@suaempresa.com.br` |
-| `ATENDENTE_PASSWORD` | Não | Senha de acesso do Atendente padrão | `Definida no .env` |
-
-> 💡 **Nota sobre o Banco de Dados**: Se as variáveis `CLOUDFLARE_*` forem omitidas, a aplicação entra automaticamente em modo **Local Engine**, mantendo todos os dados salvos no volume SQLite persistente do Docker (`/app/data`).
-
----
-
-## 4. Execução Local com Docker Compose
-
-### 4.1. Garantir que a rede compartilhada existe no host:
+### 2. Executar com Docker Compose
 ```bash
+# 1. Cria a rede Docker compartilhada (se não existir)
 docker network create rede-proxy 2>/dev/null || true
-```
 
-### 4.2. Construir imagem e iniciar o contêiner único:
-```bash
+# 2. Constrói a imagem e inicia o serviço
 docker compose up -d --build
 ```
 
-### 4.3. Verificar saúde do contêiner:
-```bash
-docker compose ps
-```
+Acesse a aplicação em: **`http://localhost:3000`**
 
-Saída esperada:
-```text
-NAME                  SERVICE    STATUS                    PORTS
-contador-apoio-app    app        Up (healthy)              0.0.0.0:3000->3000
-```
-
-### 4.4. Testar conectividade e healthcheck da API:
+### 3. Verificar Conectividade e Saúde
 ```bash
 curl http://localhost:3000/api/health
 ```
 
-Resposta esperada:
-```json
-{
-  "status": "online",
-  "system": "Apoio ao Tratamento API",
-  "database": {
-    "provider": "Cloudflare D1",
-    "mode": "cloudflare_remote",
-    "isConnected": true
-  }
-}
-```
-
-### 4.5. Acessar a aplicação:
-* **Web App**: Abra o navegador em [`http://localhost:3000`](http://localhost:3000)
-
 ---
 
-## 5. Publicação no Docker Hub & Deploy em VPS
-
-O serviço unificado está configurado com a imagem oficial:
-```text
-maxwellrodriguesferreira/apoio-tratamento:latest
-```
-
-### 5.1. Compilar e Publicar a Imagem (Na Máquina de Desenvolvimento):
-```bash
-# 1. Login no Docker Hub
-docker login
-
-# 2. Compilar a imagem unificada
-docker compose build
-
-# 3. Publicar no Docker Hub
-docker push maxwellrodriguesferreira/apoio-tratamento:latest
-```
-
-> 🔒 **Segurança**: As variáveis de ambiente do arquivo `.env` **não são embutidas na imagem**. Apenas o código compilado da aplicação é enviado para o Docker Hub.
-
----
-
-### 5.2. Instalação e Execução na VPS (Servidor de Produção):
-
-1. **Acesse sua VPS via SSH**:
-   ```bash
-   ssh usuario@ip-da-vps
-   ```
-
-2. **Crie o diretório do projeto e copie o `docker-compose.yml`**:
-   ```bash
-   mkdir -p /opt/apoio-tratamento && cd /opt/apoio-tratamento
-   ```
-
-3. **Crie e configure o arquivo `.env` na VPS**:
-   ```bash
-   nano .env
-   ```
-   *Cole suas credenciais e salve o arquivo (`Ctrl + O`, `Enter`, `Ctrl + X`).*
-
-4. **Restrinja as permissões do `.env` por segurança**:
-   ```bash
-   chmod 600 .env
-   ```
-
-5. **Garanta a existência da rede Docker compartilhada**:
-   ```bash
-   docker network create rede-proxy 2>/dev/null || true
-   ```
-
-6. **Baixe a imagem unificada e inicialize o contêiner**:
-   ```bash
-   docker compose pull
-   docker compose up -d
-   ```
-
----
-
-## 6. Integração com Nginx Proxy Manager & Hostinger DNS
-
-Com o contêiner unificado conectado à rede **`rede-proxy`**, o Nginx Proxy Manager (NPM) roteia o tráfego de forma direta e sem expor portas extras:
-
-### 6.1. Configuração no Painel do NPM:
-1. **Aba Details**:
-   * **Domain Names**: `apoio.suadrogaria.com.br` *(apontado na Hostinger via Registro A)*
-   * **Scheme**: `http`
-   * **Forward Hostname / IP**: `contador-apoio-app`
-   * **Forward Port**: `3000`
-   * Marque: **Block Common Exploits**, **Websockets Support** e **Cache Assets**.
-2. **Aba SSL**:
-   * **SSL Certificate**: Selecione *Request a new SSL Certificate* (Let's Encrypt gratuito).
-   * Marque: **Force SSL**, **HTTP/2 Support** e aceite os termos de serviço.
-   * Clique em **Save**.
-
-### 6.2. Exemplo para Nginx Tradicional no Host:
-```nginx
-server {
-    listen 80;
-    server_name apoio.suadrogaria.com.br;
-
-    location / {
-        proxy_pass http://contador-apoio-app:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
----
-
-## 7. Testes Automatizados
-
-O projeto conta com suíte de testes unitários e de integração utilizando **Vitest**:
+## 📦 Comandos Essenciais
 
 ```bash
+# Ver logs em tempo real
+docker compose logs -f
+
+# Reiniciar o serviço
+docker compose restart
+
+# Parar mantendo o volume de dados
+docker compose down
+
+# Rodar testes automatizados (Vitest)
 npm run test
 ```
 
-### Cobertura dos testes:
-* **Cálculo Determinístico de Metas**: Metas diárias, metas mensais e projeção linear proporcional com exclusão de domingos.
-* **Integridade de Auditoria (Audit Trail)**: Criação de snapshots `old_value` e `new_value`, validação de soft delete e controle de concorrência (`version`).
-* **Segurança e RBAC**: Restrição de acesso entre perfis ADMIN e ATENDENTE, validação de rotas proibidas e autenticação.
+---
+
+## 📚 Documentações Complementares
+
+Para aprofundar em tópicos específicos de infraestrutura, arquitetura e segurança:
+
+* 🏛️ **[Arquitetura Detalhada](ARCHITECTURE.md)**: Diagrama de fluxo, schemas de banco de dados e ciclo de vida do contêiner.
+* 🚀 **[Deploy Contínuo e CI/CD](README_CICD_WATCHTOWER.md)**: Automação com GitHub Actions, Docker Hub e atualização contínua via Watchtower.
+* 🌐 **[Deploy em VPS & Nginx Proxy Manager](MANUAL_DEPLOY_VPS_NPM.md)**: Passo a passo completo de publicação em VPS, SSL e proxy reverso.
+* ☸️ **[Manifestos Kubernetes (K8s)](k8s/README.md)**: Implantação em clusters Kubernetes (k3s, EKS, GKE).
+* 🔒 **[Relatórios de Segurança e Testes](reports/security/)**: Evidências de testes de segurança e relatório executivo.
 
 ---
 
-## 8. Comandos Úteis do Docker Compose
+## 👨‍⚕️ Autoria e Responsabilidade Técnica
 
-```bash
-# Ver logs em tempo real da aplicação unificada:
-docker compose logs -f
-
-# Reiniciar o contêiner:
-docker compose restart
-
-# Parar a aplicação mantendo os dados persistidos:
-docker compose down
-
-# Parar e remover volumes locais (atenção: apaga dados do SQLite local):
-docker compose down -v
-```
-
----
-
-## 9. Autoria, Responsabilidade Técnica e Licença
-
-A aplicação foi desenvolvida pelo Desenvolvedor de Software e Farmacêutico:
-* **Autor / Responsável Técnico**: **Maxwell Rodrigues Ferreira**
+* **Responsável Técnico / Desenvolvedor**: **Maxwell Rodrigues Ferreira**
 * **Registro Profissional**: **CRF-SP: 86426**
+* **Imagem Oficial no Docker Hub**: [`maxwellrodriguesferreira/apoio-tratamento:latest`](https://hub.docker.com/r/maxwellrodriguesferreira/apoio-tratamento)
 
-Unindo engenharia de software contemporânea, resiliência arquitetural e sólida vivência em assistência farmacêutica clínica e varejo farmacêutico.
-
-Projeto desenvolvido com padrões corporativos de arquitetura de software para Drogarias e Clínicas Farmacêuticas. Todos os direitos reservados.
+---
+*Desenvolvido sob padrões corporativos para farmácias e drogarias. Todos os direitos reservados.*
