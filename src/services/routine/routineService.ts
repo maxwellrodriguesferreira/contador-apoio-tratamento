@@ -207,4 +207,86 @@ export class RoutineService {
 
     return routine;
   }
+
+  /**
+   * Limpa registros de rotina (em lote / em massa)
+   * Suporta exclusão definitiva (hard delete) ou mover para lixeira (soft delete)
+   */
+  static async clearLancamentos(
+    currentUser: UserProfile,
+    options: {
+      hardDelete?: boolean;
+      onlyDeleted?: boolean;
+      targetIds?: string[];
+    } = {}
+  ): Promise<number> {
+    if (currentUser.role !== 'ADMIN') {
+      throw new Error('403 Forbidden: Apenas ADMINISTRADORES podem limpar registros de atendimentos.');
+    }
+
+    let routines = LocalDatabase.getRoutines();
+    let affectedCount = 0;
+    const now = new Date().toISOString();
+    const author = `${currentUser.name} (${currentUser.role})`;
+
+    const shouldAffect = (r: RoutineCare) => {
+      if (options.targetIds && options.targetIds.length > 0) {
+        return options.targetIds.includes(r.id);
+      }
+      if (options.onlyDeleted) {
+        return Boolean(r.deletedAt);
+      }
+      return true;
+    };
+
+    if (options.hardDelete) {
+      const toDelete = routines.filter(shouldAffect);
+      affectedCount = toDelete.length;
+      routines = routines.filter((r) => !shouldAffect(r));
+      LocalDatabase.saveRoutines(routines);
+
+      const syncPromises = toDelete.map((r) => CloudSyncService.deleteRoutine(r.id));
+      await Promise.all(syncPromises);
+    } else {
+      const syncPromises: Promise<void>[] = [];
+      routines = routines.map((r) => {
+        if (shouldAffect(r) && !r.deletedAt) {
+          affectedCount++;
+          const updated: RoutineCare = {
+            ...r,
+            deletedAt: now,
+            deletedBy: author,
+            updatedAt: now,
+            version: r.version + 1,
+          };
+          syncPromises.push(CloudSyncService.syncRoutine(updated));
+          return updated;
+        }
+        return r;
+      });
+      LocalDatabase.saveRoutines(routines);
+      await Promise.all(syncPromises);
+    }
+
+    if (affectedCount > 0) {
+      AuditService.logSystemAction(
+        currentUser.id,
+        currentUser.name,
+        currentUser.role,
+        'SUPPORT_DELETED' as any,
+        'ROUTINE_CARE',
+        'BATCH_CLEAR',
+        {
+          affectedCount,
+          hardDelete: Boolean(options.hardDelete),
+          onlyDeleted: Boolean(options.onlyDeleted),
+          targetIdsCount: options.targetIds?.length,
+        }
+      );
+      CloudSyncService.notifyDataChanged();
+    }
+
+    return affectedCount;
+  }
 }
+

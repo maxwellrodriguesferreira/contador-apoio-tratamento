@@ -388,11 +388,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           icon="task_alt"
           iconBgColor="bg-surface-container-low"
           iconColor="text-primary"
-          trendText={`${metrics.todayPercentage}%`}
-          trendVariant={metrics.todayPercentage >= 100 ? 'success' : 'neutral'}
-          footerLabel={`Meta: ${metrics.todayGoal}`}
-          footerValue={metrics.todayDifference >= 0 ? `+${metrics.todayDifference}` : `${metrics.todayDifference}`}
-          progressPercentage={metrics.todayPercentage}
+          trendText={metrics.todayGoal > 0 ? `${metrics.todayPercentage}%` : '0%'}
+          trendVariant={metrics.todayGoal > 0 && metrics.todayPercentage >= 100 ? 'success' : 'neutral'}
+          footerLabel={metrics.todayGoal > 0 ? `Meta: ${metrics.todayGoal}` : 'Meta: 0'}
+          footerValue={
+            metrics.todayGoal > 0
+              ? metrics.todayDifference >= 0
+                ? `+${metrics.todayDifference}`
+                : `${metrics.todayDifference}`
+              : '-'
+          }
+          progressPercentage={metrics.todayGoal > 0 ? metrics.todayPercentage : 0}
           progressBarColor={metrics.todayPercentage >= 100 ? 'bg-emerald-600' : 'bg-primary'}
         />
 
@@ -403,11 +409,11 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           icon="calendar_month"
           iconBgColor="bg-secondary-fixed"
           iconColor="text-on-secondary-fixed"
-          trendText={`${metrics.monthPercentage}%`}
-          trendVariant="secondary"
-          footerLabel="Meta Mensal"
-          footerValue={`${metrics.monthGoal}`}
-          progressPercentage={metrics.monthPercentage}
+          trendText={metrics.monthGoal > 0 ? `${metrics.monthPercentage}%` : '0%'}
+          trendVariant={metrics.monthGoal > 0 ? 'secondary' : 'neutral'}
+          footerLabel={metrics.monthGoal > 0 ? 'Meta Mensal' : 'Meta Mensal: 0'}
+          footerValue={metrics.monthGoal > 0 ? `${metrics.monthGoal}` : '-'}
+          progressPercentage={metrics.monthGoal > 0 ? metrics.monthPercentage : 0}
           progressBarColor="bg-secondary"
         />
 
@@ -418,8 +424,14 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           icon="flag"
           iconBgColor="bg-surface-container-low"
           iconColor="text-tertiary-container"
-          trendText={metrics.todayDifference >= 0 ? 'Atingida' : 'Em Curso'}
-          trendVariant={metrics.todayDifference >= 0 ? 'success' : 'warning'}
+          trendText={
+            metrics.todayGoal > 0
+              ? metrics.todayDifference >= 0
+                ? 'Atingida'
+                : 'Em Curso'
+              : 'Zerada'
+          }
+          trendVariant={metrics.todayGoal > 0 ? (metrics.todayDifference >= 0 ? 'success' : 'warning') : 'neutral'}
           footerLabel="Atendentes Ativos"
           footerValue={`${metrics.activeAttendantsCount}`}
         />
@@ -431,8 +443,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           icon="track_changes"
           iconBgColor="bg-surface-container-low"
           iconColor="text-primary"
-          trendText={`Faltam ${metrics.monthRemainingValue}`}
-          trendVariant={metrics.monthRemainingValue === 0 ? 'success' : 'neutral'}
+          trendText={metrics.monthGoal > 0 ? `Faltam ${metrics.monthRemainingValue}` : 'Zerada'}
+          trendVariant={metrics.monthGoal > 0 && metrics.monthRemainingValue === 0 ? 'success' : 'neutral'}
           footerLabel="Dias Restantes"
           footerValue={`${metrics.monthRemainingDays} dias`}
         />
@@ -447,7 +459,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           trendText="apoios/dia"
           trendVariant="neutral"
           footerLabel="Ritmo Necessário"
-          footerValue={`${metrics.monthRequiredPace}/dia`}
+          footerValue={metrics.monthGoal > 0 ? `${metrics.monthRequiredPace}/dia` : '-'}
         />
 
         {/* 6. Projeção Mensal */}

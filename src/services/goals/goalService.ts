@@ -83,7 +83,7 @@ export class GoalService {
       newGoal.id,
       { type: newGoal.type, targetValue: newGoal.targetValue, startDate: newGoal.startDate }
     );
-
+    CloudSyncService.notifyDataChanged();
     return newGoal;
   }
 
@@ -187,6 +187,7 @@ export class GoalService {
       }
     );
 
+    CloudSyncService.notifyDataChanged();
     return updatedGoal;
   }
 
@@ -214,6 +215,8 @@ export class GoalService {
       removed.id,
       { deletedGoalType: removed.type, targetValue: removed.targetValue }
     );
+
+    CloudSyncService.notifyDataChanged();
   }
 
   static async clearAllGoals(currentUser: UserProfile): Promise<void> {
@@ -238,5 +241,7 @@ export class GoalService {
       'ALL_GOALS',
       { count: goals.length, action: 'RESET_ALL_GOALS' }
     );
+
+    CloudSyncService.notifyDataChanged();
   }
 }

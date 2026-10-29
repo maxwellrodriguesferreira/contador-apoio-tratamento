@@ -95,11 +95,6 @@ export function getActiveGoal(
   });
 
   if (matchingGoals.length === 0) {
-    // Valores padrão saudáveis de fallback caso não cadastrado
-    if (type === 'DAILY_STORE') return 60;
-    if (type === 'MONTHLY_STORE') return 1200;
-    if (type === 'DAILY_ATTENDANT') return 10;
-    if (type === 'MONTHLY_ATTENDANT') return 200;
     return 0;
   }
 
@@ -131,8 +126,8 @@ export function calculateDashboardMetrics(
   const todaySupports = activeSupports.filter((s) => s.date === targetDate);
   const todayTotal = todaySupports.reduce((acc, curr) => acc + curr.quantity, 0);
   const todayGoal = getActiveGoal(goals, 'DAILY_STORE', targetDate);
-  const todayPercentage = calculatePercentage(todayTotal, todayGoal);
-  const todayDifference = todayTotal - todayGoal;
+  const todayPercentage = todayGoal > 0 ? calculatePercentage(todayTotal, todayGoal) : 0;
+  const todayDifference = todayGoal > 0 ? todayTotal - todayGoal : 0;
 
   // Atendentes ativos e participantes
   const activeAttendants = attendants.filter((a) => a.active);
@@ -146,8 +141,8 @@ export function calculateDashboardMetrics(
   const monthSupports = activeSupports.filter((s) => s.date.startsWith(targetMonth));
   const monthTotal = monthSupports.reduce((acc, curr) => acc + curr.quantity, 0);
   const monthGoal = getActiveGoal(goals, 'MONTHLY_STORE', targetDate);
-  const monthPercentage = calculatePercentage(monthTotal, monthGoal);
-  const monthRemainingValue = Math.max(0, monthGoal - monthTotal);
+  const monthPercentage = monthGoal > 0 ? calculatePercentage(monthTotal, monthGoal) : 0;
+  const monthRemainingValue = monthGoal > 0 ? Math.max(0, monthGoal - monthTotal) : 0;
 
   // Dias considerados para média (até o dia atual do mês)
   const daysConsidered = Math.max(1, currentDay);
@@ -156,7 +151,7 @@ export function calculateDashboardMetrics(
 
   const monthRemainingDays = Math.max(0, totalDaysInMonth - currentDay);
   const monthRequiredPace =
-    monthRemainingDays > 0 ? Number((monthRemainingValue / monthRemainingDays).toFixed(1)) : 0;
+    monthGoal > 0 && monthRemainingDays > 0 ? Number((monthRemainingValue / monthRemainingDays).toFixed(1)) : 0;
 
   return {
     todayTotal,

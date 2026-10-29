@@ -69,6 +69,13 @@ export const LancamentosPage: React.FC = () => {
   const [restoringItem, setRestoringItem] = useState<UnifiedLancamento | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
 
+  // Estados para Limpeza de Lançamentos
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+  const [clearServiceType, setClearServiceType] = useState<ServiceTypeFilter>('ALL');
+  const [clearScope, setClearScope] = useState<'ALL' | 'FILTERED' | 'TRASH_ONLY'>('ALL');
+  const [clearMode, setClearMode] = useState<'HARD' | 'SOFT'>('HARD');
+  const [isClearing, setIsClearing] = useState(false);
+
   const loadData = useCallback(() => {
     const sList = SupportService.getAll(true);
     const rList = RoutineService.getAll(true);
@@ -268,6 +275,77 @@ export const LancamentosPage: React.FC = () => {
     }
   };
 
+  // Itens alvo da limpeza baseado na seleção do usuário
+  const clearTargetItems = useMemo(() => {
+    let base = clearScope === 'FILTERED' ? filteredLancamentos : allLancamentos;
+    if (clearScope === 'TRASH_ONLY') {
+      base = base.filter((i) => Boolean(i.deletedAt));
+    }
+    if (clearServiceType === 'SUPPORT') {
+      base = base.filter((i) => i.serviceType === 'SUPPORT');
+    } else if (clearServiceType === 'ROUTINE') {
+      base = base.filter((i) => i.serviceType === 'ROUTINE');
+    }
+    return base;
+  }, [allLancamentos, filteredLancamentos, clearScope, clearServiceType]);
+
+  const clearTargetCount = clearTargetItems.length;
+  const clearTargetQuantitySum = clearTargetItems.reduce((acc, curr) => acc + curr.quantity, 0);
+
+  // Executa a limpeza dos lançamentos selecionados
+  const handleConfirmClear = async () => {
+    if (!user || !isAdmin || clearTargetCount === 0) return;
+    setIsClearing(true);
+    try {
+      const isHard = clearMode === 'HARD';
+      const isTrashOnly = clearScope === 'TRASH_ONLY';
+      const isFiltered = clearScope === 'FILTERED';
+
+      let supportIds: string[] | undefined = undefined;
+      let routineIds: string[] | undefined = undefined;
+
+      if (isFiltered) {
+        supportIds = clearTargetItems.filter((i) => i.serviceType === 'SUPPORT').map((i) => i.id);
+        routineIds = clearTargetItems.filter((i) => i.serviceType === 'ROUTINE').map((i) => i.id);
+      }
+
+      let clearedSupports = 0;
+      let clearedRoutines = 0;
+
+      if (clearServiceType === 'ALL' || clearServiceType === 'SUPPORT') {
+        clearedSupports = await SupportService.clearLancamentos(user, {
+          hardDelete: isHard,
+          onlyDeleted: isTrashOnly,
+          targetIds: supportIds,
+        });
+      }
+
+      if (clearServiceType === 'ALL' || clearServiceType === 'ROUTINE') {
+        clearedRoutines = await RoutineService.clearLancamentos(user, {
+          hardDelete: isHard,
+          onlyDeleted: isTrashOnly,
+          targetIds: routineIds,
+        });
+      }
+
+      const totalCleared = clearedSupports + clearedRoutines;
+      showToast(
+        `✓ Limpeza concluída com sucesso! ${totalCleared} registro(s) foram processados (${
+          isHard ? 'excluídos definitivamente' : 'movidos para a lixeira'
+        }).`,
+        'success',
+        'Lançamentos Limpos'
+      );
+      setIsClearModalOpen(false);
+      loadData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao limpar registros de lançamentos.';
+      showToast(msg, 'error');
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
@@ -293,8 +371,19 @@ export const LancamentosPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Botões de Exportação */}
+        {/* Botões de Ação e Exportação */}
         <div className="flex items-center gap-2">
+          {allLancamentos.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsClearModalOpen(true)}
+              icon="delete_sweep"
+              className="border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-colors"
+            >
+              Limpar Lançamentos
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -807,6 +896,113 @@ export const LancamentosPage: React.FC = () => {
             </div>
           }
         />
+      )}
+
+      {/* Modal de Limpeza de Lançamentos */}
+      {isClearModalOpen && (
+        <Modal
+          isOpen={isClearModalOpen}
+          onClose={() => setIsClearModalOpen(false)}
+          title="Limpar Registros de Lançamentos"
+          subtitle="Permite apagar ou mover para lixeira registros de apoio ao tratamento e na rotina com segurança."
+          maxWidth="lg"
+          footer={
+            <>
+              <Button variant="outline" size="sm" onClick={() => setIsClearModalOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleConfirmClear}
+                isLoading={isClearing}
+                loadingText="Limpando Registros..."
+                icon="delete_sweep"
+                disabled={clearTargetCount === 0}
+              >
+                Confirmar Limpeza ({clearTargetCount} registros)
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4 text-xs">
+            {/* Opção 1: Serviço */}
+            <Select
+              label="Tipo de Serviço a Limpar"
+              value={clearServiceType}
+              onChange={(e) => setClearServiceType(e.target.value as ServiceTypeFilter)}
+              options={[
+                { value: 'ALL', label: 'Todos os Lançamentos (Apoio ao Tratamento + Na Rotina)' },
+                { value: 'SUPPORT', label: 'Apenas Apoios ao Tratamento' },
+                { value: 'ROUTINE', label: 'Apenas Atendimentos Na Rotina' },
+              ]}
+            />
+
+            {/* Opção 2: Abrangência */}
+            <Select
+              label="Abrangência dos Registros"
+              value={clearScope}
+              onChange={(e) => setClearScope(e.target.value as 'ALL' | 'FILTERED' | 'TRASH_ONLY')}
+              options={[
+                { value: 'ALL', label: `Todos os registros cadastrados (${allLancamentos.length} no total)` },
+                {
+                  value: 'FILTERED',
+                  label: `Apenas registros filtrados na tabela atualmente (${filteredLancamentos.length} registros)`,
+                },
+                {
+                  value: 'TRASH_ONLY',
+                  label: `Apenas registros que já estão na lixeira (${allLancamentos.filter((i) => i.deletedAt).length} excluídos)`,
+                },
+              ]}
+            />
+
+            {/* Opção 3: Modo de Exclusão */}
+            <Select
+              label="Método de Limpeza"
+              value={clearMode}
+              onChange={(e) => setClearMode(e.target.value as 'HARD' | 'SOFT')}
+              options={[
+                {
+                  value: 'HARD',
+                  label: 'Exclusão Definitiva (Hard Delete / Purgar do Banco e Nuvem)',
+                },
+                {
+                  value: 'SOFT',
+                  label: 'Mover para Lixeira (Soft Delete - preserva possibilidade de restauração)',
+                },
+              ]}
+            />
+
+            {/* Resumo do Impacto */}
+            <div className={`p-4 rounded-xl border ${
+              clearMode === 'HARD'
+                ? 'bg-rose-50 border-rose-200 text-rose-900'
+                : 'bg-amber-50 border-amber-200 text-amber-900'
+            }`}>
+              <div className="flex items-center gap-2 mb-2 font-bold text-sm">
+                <span className="material-symbols-outlined text-[20px]">
+                  {clearMode === 'HARD' ? 'warning' : 'info'}
+                </span>
+                <span>Resumo da Operação</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-outline block text-[11px]">Registros Afetados:</span>
+                  <span className="font-extrabold text-base">{clearTargetCount}</span>
+                </div>
+                <div>
+                  <span className="text-outline block text-[11px]">Volume de Atendimentos:</span>
+                  <span className="font-extrabold text-base">{clearTargetQuantitySum} apoios/rotinas</span>
+                </div>
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed">
+                {clearMode === 'HARD'
+                  ? 'Atenção: A exclusão definitiva remove os registros permanentemente do banco local e do Cloudflare D1. Esta ação não poderá ser desfeita.'
+                  : 'Os registros serão marcados como excluídos e não aparecerão mais nos cálculos ativos, mas poderão ser restaurados por um administrador.'}
+              </p>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );

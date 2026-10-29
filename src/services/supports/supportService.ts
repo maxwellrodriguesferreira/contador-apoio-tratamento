@@ -248,4 +248,92 @@ export class SupportService {
 
     return support;
   }
+
+  /**
+   * Limpa registros de apoios (em lote / em massa)
+   * Suporta exclusão definitiva (hard delete) ou mover para lixeira (soft delete)
+   */
+  static async clearLancamentos(
+    currentUser: UserProfile,
+    options: {
+      hardDelete?: boolean;
+      onlyDeleted?: boolean;
+      targetIds?: string[];
+    } = {}
+  ): Promise<number> {
+    if (currentUser.role !== 'ADMIN') {
+      throw new Error('403 Forbidden: Apenas ADMINISTRADORES podem limpar registros de apoios.');
+    }
+
+    let supports = LocalDatabase.getSupports();
+    let affectedCount = 0;
+    const now = new Date().toISOString();
+    const author = `${currentUser.name} (${currentUser.role})`;
+
+    const shouldAffect = (s: TreatmentSupport) => {
+      if (options.targetIds && options.targetIds.length > 0) {
+        return options.targetIds.includes(s.id);
+      }
+      if (options.onlyDeleted) {
+        return Boolean(s.deletedAt);
+      }
+      return true;
+    };
+
+    const datesToInvalidate = new Set<string>();
+
+    if (options.hardDelete) {
+      const toDelete = supports.filter(shouldAffect);
+      affectedCount = toDelete.length;
+      toDelete.forEach((s) => datesToInvalidate.add(s.date));
+
+      supports = supports.filter((s) => !shouldAffect(s));
+      LocalDatabase.saveSupports(supports);
+
+      const syncPromises = toDelete.map((s) => CloudSyncService.deleteSupport(s.id));
+      await Promise.all(syncPromises);
+    } else {
+      const syncPromises: Promise<void>[] = [];
+      supports = supports.map((s) => {
+        if (shouldAffect(s) && !s.deletedAt) {
+          affectedCount++;
+          datesToInvalidate.add(s.date);
+          const updated: TreatmentSupport = {
+            ...s,
+            deletedAt: now,
+            deletedBy: author,
+            updatedAt: now,
+            version: s.version + 1,
+          };
+          syncPromises.push(CloudSyncService.syncSupport(updated));
+          return updated;
+        }
+        return s;
+      });
+      LocalDatabase.saveSupports(supports);
+      await Promise.all(syncPromises);
+    }
+
+    if (affectedCount > 0) {
+      AuditService.logSystemAction(
+        currentUser.id,
+        currentUser.name,
+        currentUser.role,
+        'SUPPORT_DELETED',
+        'TREATMENT_SUPPORT',
+        'BATCH_CLEAR',
+        {
+          affectedCount,
+          hardDelete: Boolean(options.hardDelete),
+          onlyDeleted: Boolean(options.onlyDeleted),
+          targetIdsCount: options.targetIds?.length,
+        }
+      );
+      datesToInvalidate.forEach((d) => AIService.invalidateCacheForDate(d));
+      CloudSyncService.notifyDataChanged();
+    }
+
+    return affectedCount;
+  }
 }
+

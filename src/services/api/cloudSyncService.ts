@@ -199,6 +199,23 @@ export class CloudSyncService {
     }
   }
 
+  static async deleteSupport(id: string): Promise<void> {
+    try {
+      await apiRequest<{ success: boolean }>(`/supports/${id}`, 'DELETE');
+    } catch (e) {
+      console.warn('Erro ao excluir apoio no Cloudflare D1:', e);
+    }
+  }
+
+  static async deleteRoutine(id: string): Promise<void> {
+    try {
+      await apiRequest<{ success: boolean }>(`/routines/${id}`, 'DELETE');
+    } catch (e) {
+      console.warn('Erro ao excluir atendimento de rotina no Cloudflare D1:', e);
+    }
+  }
+
+
 
   static async syncGoal(goal: Goal): Promise<void> {
     try {
