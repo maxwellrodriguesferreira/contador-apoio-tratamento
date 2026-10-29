@@ -1,8 +1,9 @@
 # Manual Prático de Implementação — Raspberry Pi (ARM64) & VPS Cloud (x86_64)
 
-> Guia passo a passo completo para instalação, provisionamento, governança, proxy reverso e atualização contínua do sistema **Apoio ao Tratamento**.
+> Guia passo a passo completo para instalação, provisionamento, governança, pipeline CI/CD, proxy reverso e atualização contínua do sistema **Apoio ao Tratamento**.
 > 
 > * **Imagem Oficial no Docker Hub**: `maxwellrodriguesferreira/apoio-tratamento:latest` (multi-arch `linux/amd64` e `linux/arm64`).
+> * **Automação de Build**: **GitHub Actions** com QEMU e Docker Buildx para compilação simultânea multiplataforma.
 > * **Gestão Visual**: **Portainer CE** presente tanto na Raspberry Pi quanto na VPS.
 > * **Proxy Reverso & SSL**: **Nginx Proxy Manager (NPM)** presente em ambos os ambientes.
 > * **Roteamento Externo**:
@@ -19,11 +20,12 @@
 4. [Etapa 2: Instalação do Portainer CE (Ambos os Ambientes)](#4-etapa-2-instalação-do-portainer-ce-ambos-os-ambientes)
 5. [Etapa 3: Instalação do Nginx Proxy Manager (NPM)](#5-etapa-3-instalação-do-nginx-proxy-manager-npm)
 6. [Etapa 4: Roteamento de Rede — Cloudflare Tunnel (RPi) vs DNS Direto (VPS)](#6-etapa-4-roteamento-de-rede--cloudflare-tunnel-rpi-vs-dns-direto-vps)
-7. [Etapa 5: Configuração de Ambiente (.env) e Variáveis](#7-etapa-5-configuração-de-ambiente-env-e-variáveis)
-8. [Etapa 6: Deploy da Aplicação (Portainer Stacks ou CLI)](#8-etapa-6-deploy-da-aplicação-portainer-stacks-ou-cli)
-9. [Etapa 7: Atualização Contínua Automática com Watchtower](#9-etapa-7-atualização-contínua-automática-com-watchtower)
-10. [Etapa 8: Rotinas de Backup, Monitoramento e Manutenção](#10-etapa-8-rotinas-de-backup-monitoramento-e-manutenção)
-11. [Quadro Comparativo: Raspberry Pi vs VPS](#11-quadro-comparativo-raspberry-pi-vs-vps)
+7. [Etapa 5: Configuração do CI/CD no GitHub Actions & Docker Hub](#7-etapa-5-configuração-do-cicd-no-github-actions--docker-hub)
+8. [Etapa 6: Configuração de Ambiente (.env) e Variáveis](#8-etapa-6-configuração-de-ambiente-env-e-variáveis)
+9. [Etapa 7: Deploy da Aplicação (Portainer Stacks ou CLI)](#9-etapa-7-deploy-da-aplicação-portainer-stacks-ou-cli)
+10. [Etapa 8: Atualização Contínua Automática com Watchtower](#10-etapa-8-atualização-contínua-automática-com-watchtower)
+11. [Etapa 9: Rotinas de Backup, Monitoramento e Manutenção](#11-etapa-9-rotinas-de-backup-monitoramento-e-manutenção)
+12. [Quadro Comparativo: Raspberry Pi vs VPS](#12-quadro-comparativo-raspberry-pi-vs-vps)
 
 ---
 
@@ -31,7 +33,16 @@
 
 ```mermaid
 flowchart TD
-    DH[(🐳 Docker Hub: maxwellrodriguesferreira/apoio-tratamento:latest)]
+    Dev[💻 Desenvolvedor] -->|git push origin main| GH[🐙 GitHub Actions Multi-Arch]
+    
+    subgraph CI [Pipeline GitHub Actions]
+        QEMU[QEMU Emulator ARM64] --> Buildx[Docker Buildx]
+        Buildx --> AMD[Compilação linux/amd64]
+        Buildx --> ARM[Compilação linux/arm64]
+    end
+
+    GH --> CI
+    CI -->|Push Multi-Arch Manifest| DH[(🐳 Docker Hub: maxwellrodriguesferreira/apoio-tratamento:latest)]
 
     subgraph RPi [🍓 Borda: Raspberry Pi 4/5 (ARM64) - Drogaria / Sem IP Fixo]
         CFT[☁️ Cloudflare Tunnel Connector] -->|Túnel Seguro Outbound| Edge[Cloudflare Edge / Internet]
@@ -53,8 +64,8 @@ flowchart TD
 ```
 
 ### Principais Diferenças de Conectividade:
-* **Raspberry Pi**: Fica dentro da rede física da farmácia, atrás de roteadores de operadoras (CGNAT), sem IP público fixo. O **Cloudflare Tunnel** é **obrigatório** para expor a aplicação na internet de forma segura com SSL e proteção DDoS, sem expor portas do modem.
-* **VPS**: Já possui **endereço IP público IPv4 estático**. O tráfego da internet chega diretamente nas portas 80/443 da máquina, onde o **Nginx Proxy Manager** recebe a requisição, emite o certificado SSL Let's Encrypt automaticamente e repassa para a aplicação. O Cloudflare Tunnel é **desnecessário**.
+* **Raspberry Pi**: Opera dentro da rede física da farmácia, sob **CGNAT** da operadora, sem IP público fixo. O **Cloudflare Tunnel** é **obrigatório** para expor a aplicação na internet de forma segura com SSL e proteção DDoS, sem abrir portas no modem/roteador.
+* **VPS**: Já possui **endereço IP público IPv4 estático**. O tráfego chega diretamente nas portas 80/443 do servidor, onde o **Nginx Proxy Manager** recebe a requisição, emite o certificado SSL Let's Encrypt automaticamente e repassa para a aplicação. O Cloudflare Tunnel é **desnecessário**.
 
 ---
 
@@ -83,7 +94,7 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl wget git nano ca-certificates gnupg lsb-release
 ```
 
-### 3.2. Otimizações para Raspberry Pi (Opcional, mas Altamente Recomendado):
+### 3.2. Otimizações para Raspberry Pi (Preservação do MicroSD e RAM):
 Na Raspberry Pi, para evitar esgotamento de memória e proteger o cartão SD contra excesso de escritas:
 ```bash
 # Ativa ZRAM (compressão dinâmica de RAM)
@@ -202,37 +213,71 @@ docker compose up -d
 
 ## 6. Etapa 4: Roteamento de Rede — Cloudflare Tunnel (RPi) vs DNS Direto (VPS)
 
-Aqui reside a diferença fundamental entre os dois ambientes:
-
 ---
 
-### 🍓 Caso A: Raspberry Pi — Configuração do Cloudflare Tunnel (Obrigatório)
+### 🍓 Caso A: Raspberry Pi — Configuração do Cloudflare Tunnel via Docker (Obrigatório)
 
-Como a Raspberry Pi opera conectada ao modem da farmácia sem IP público fixo e sob **CGNAT**, utilizamos o **Cloudflare Tunnel** (gratuito) para criar um túnel seguro de saída (*outbound*) criptografado diretamente para a borda global da Cloudflare.
+Como a Raspberry Pi opera conectada ao roteador da farmácia sem IP público fixo e sob **CGNAT**, utilizamos o **Cloudflare Tunnel** (gratuito) para criar um túnel seguro de saída (*outbound*) criptografado diretamente para a borda global da Cloudflare.
+
+Executar o conector via **Docker** é o método mais simples, seguro e limpo, pois dispensa a instalação de pacotes no sistema operacional, reinicia automaticamente no boot e pode ser gerenciado diretamente pelo **Portainer**.
 
 ```text
-[Cliente / Celular] ──HTTPS──> [Cloudflare Edge (WAF/DDoS)] ──Túnel Criptografado──> [cloudflared na RPi] ──> [Nginx Proxy Manager ou App:3000]
+[Cliente / Celular] ──HTTPS──> [Cloudflare Edge (WAF/DDoS)] ──Túnel Criptografado──> [Contêiner cloudflared na RPi] ──(rede-proxy)──> [NPM / App:3000]
 ```
 
 #### Passo 1: Criar o Túnel no Painel Cloudflare Zero Trust:
 1. Acesse o painel [Cloudflare Zero Trust](https://one.dash.cloudflare.com/).
 2. Vá em **Networks** ➔ **Tunnels** ➔ Clique em **Add a Tunnel**.
-3. Selecione o conector **Cloudflared** e dê um nome (ex: `drogaria-rpi4-tunnel`).
-4. Na tela de instalação, selecione o ambiente **Linux** e a arquitetura **ARM64 64-bit**.
-5. Copie o comando de instalação que contém o token exclusivo:
-   ```bash
-   curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64.deb && sudo dpkg -i cloudflared.deb && sudo cloudflared service install SEU_TOKEN_AQUI
-   ```
-6. Execute o comando no terminal SSH da sua Raspberry Pi. O serviço inicializará automaticamente.
+3. Selecione o tipo de conector **Cloudflared** e dê um nome (ex: `drogaria-rpi4-tunnel`).
+4. Na tela de instalação, selecione a aba **Docker**.
+5. O painel exibirá um comando contendo o seu token exclusivo (uma longa chave alfanumérica). Copie o valor do token após `--token`.
 
-#### Passo 2: Configurar o Domínio Público (Public Hostname):
-Ainda no painel da Cloudflare, na aba **Public Hostname**:
+#### Passo 2: Executar o Contêiner do Cloudflare Tunnel:
+Você pode executar o túnel via terminal ou pelo Portainer:
+
+**Opção A: Via Terminal (Comando Docker Direto):**
+Execute na Raspberry Pi (o contêiner será automaticamente anexado à rede `rede-proxy`):
+```bash
+docker run -d \
+  --name cloudflared-tunnel \
+  --restart unless-stopped \
+  --network rede-proxy \
+  cloudflare/cloudflared:latest tunnel --no-autoupdate run --token SEU_TOKEN_AQUI
+```
+
+**Opção B: Via Portainer (Stack dedicada):**
+1. Acesse o Portainer (`https://IP_DA_RASPBERRY:9443`) ➔ **Stacks** ➔ **Add stack** (nome: `cloudflare-tunnel`).
+2. Cole o compose:
+   ```yaml
+   services:
+     tunnel:
+       image: cloudflare/cloudflared:latest
+       container_name: cloudflared-tunnel
+       restart: unless-stopped
+       command: tunnel --no-autoupdate run --token SEU_TOKEN_AQUI
+       networks:
+         - rede-proxy
+
+   networks:
+     rede-proxy:
+       external: true
+   ```
+3. Clique em **Deploy the stack**.
+
+#### Passo 3: Configurar o Domínio Público (Public Hostname):
+De volta ao painel da Cloudflare, na aba **Public Hostname**:
 * **Subdomain**: `apoio`
 * **Domain**: `suadrogaria.com.br` (domínio gerenciado na Cloudflare)
 * **Service Type**: `HTTP`
-* **URL**: `localhost:80` *(para passar pelo Nginx Proxy Manager)* ou `localhost:3000` *(direto para a aplicação)*.
+* **URL**: Como o contêiner `cloudflared-tunnel` está na rede `rede-proxy`, você pode apontar diretamente pelo nome do serviço Docker:
+  * `http://nginx-proxy-manager:80` *(para passar pelo Nginx Proxy Manager)*
+  * ou `http://contador-apoio-app:3000` *(diretamente para a aplicação)*
 
-Pronto! Seu sistema já estará acessível globalmente em `https://apoio.suadrogaria.com.br` com SSL automático sem abrir nenhuma porta no roteador da drogaria.
+#### Vantagens do Método Docker:
+* ✅ **Zero Poluição no Host**: Nenhum pacote `.deb` instalado no Raspberry Pi OS.
+* ✅ **Monitoramento pelo Portainer**: Acompanhe o status do túnel e logs de conexão em tempo real pela web.
+* ✅ **Resiliência Total**: Reinicia automaticamente em caso de reinicialização ou queda de energia da drogaria (`restart: unless-stopped`).
+* ✅ **SSL e DDoS Automáticos**: Tráfego criptografado sem abrir portas no roteador da farmácia.
 
 ---
 
@@ -241,9 +286,9 @@ Pronto! Seu sistema já estará acessível globalmente em `https://apoio.suadrog
 A VPS possui **endereço IP público IPv4 fixo**. O Cloudflare Tunnel é **completamente desnecessário**.
 
 #### Passo 1: Apontamento no Painel de DNS do seu Domínio:
-Acesse o painel onde seu domínio está registrado (Hostinger, Registro.br, GoDaddy, etc.) e crie um **Registro A**:
+Acesse o painel do seu domínio (Hostinger, Registro.br, Cloudflare, etc.) e crie um **Registro A**:
 * **Tipo**: `A`
-* **Nome / Host**: `apoio` (ou `@` se for usar o domínio direto)
+* **Nome / Host**: `apoio` (ou `@` para domínio raiz)
 * **Valor / Destino**: `IP_PUBLICO_DA_SUA_VPS` (ex: `195.35.10.80`)
 * **TTL**: `300` segundos
 
@@ -260,11 +305,57 @@ Acesse o painel onde seu domínio está registrado (Hostinger, Registro.br, GoDa
    * Marque: **Force SSL**, **HTTP/2 Support** e preencha seu e-mail.
    * Aceite os termos do Let's Encrypt e clique em **Save**.
 
-O Nginx Proxy Manager emitirá o certificado SSL gratuito Let's Encrypt automaticamente e cuidará da renovação.
+---
+
+## 7. Etapa 5: Configuração do CI/CD no GitHub Actions & Docker Hub
+
+Para que as alterações no código sejam compiladas automaticamente tanto para a **VPS (AMD64)** quanto para a **Raspberry Pi (ARM64)** e publicadas no Docker Hub:
+
+### 7.1. Gerar o Personal Access Token no Docker Hub:
+1. Acesse sua conta em [hub.docker.com](https://hub.docker.com/).
+2. Clique no seu avatar no canto superior direito ➔ **Account Settings**.
+3. No menu lateral, clique em **Security** ➔ **New Access Token**.
+4. Defina:
+   * **Description**: `github-actions-ci-cd`
+   * **Access permissions**: `Read & Write`
+5. Clique em **Generate** e copie o token gerado (começa com `dckr_pat_...`).
+
+### 7.2. Configurar os Secrets no Repositório GitHub:
+1. Abra seu repositório no GitHub (`github.com/seu-usuario/contador-apoio-tratamento`).
+2. Vá em **Settings** ➔ **Secrets and variables** ➔ **Actions**.
+3. Clique em **New repository secret** e cadastre os seguintes segredos:
+
+| Nome do Segredo | Obrigatório? | Valor / Descrição |
+| :--- | :---: | :--- |
+| `DOCKERHUB_USERNAME` | **Sim** | Seu nome de usuário do Docker Hub (ex: `maxwellrodriguesferreira`) |
+| `DOCKERHUB_TOKEN` | **Sim** | O token de acesso pessoal gerado (`dckr_pat_...`) |
+| `WATCHTOWER_WEBHOOK_URL` | *Opcional* | URL do webhook do Watchtower para atualização instantânea |
+| `WATCHTOWER_HTTP_API_TOKEN`| *Opcional* | Token Bearer caso a API do Watchtower exija autenticação |
+
+### 7.3. Como Funciona a Pipeline Multi-Arquitetura:
+O arquivo de workflow já está pronto no projeto em:
+👉 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml)
+
+A pipeline executa automaticamente a cada `git push` na branch `main`:
+1. **QEMU**: Emula a arquitetura ARM64 em servidores de compilação da nuvem.
+2. **Docker Buildx**: Compila o frontend React e backend Express em paralelo para:
+   * `linux/amd64` (Servidores VPS Intel/AMD).
+   * `linux/arm64` (Raspberry Pi 3/4/5).
+3. **Manifesto Multi-Plataforma**: Envia um único pacote ao Docker Hub com a tag `:latest`. Quando a Raspberry Pi ou a VPS faz `docker compose pull`, o Docker detecta automaticamente a arquitetura do processador e baixa a imagem nativa correta.
+4. **Cache Inteligente (`type=gha`)**: Reutiliza camadas compiladas anteriormente, reduzindo o tempo de build para menos de 1 minuto.
+
+### 7.4. Disparar e Testar o Workflow:
+* **Disparo Automático**: Qualquer `git push origin main` inicia a compilação.
+* **Disparo Manual**: Acesse a aba **Actions** no GitHub ➔ Selecione **CI/CD Pipeline** ➔ Clique em **Run workflow**.
+
+Para inspecionar a imagem gerada no Docker Hub e certificar-se de que ambas as arquiteturas estão presentes:
+```bash
+docker buildx imagetools inspect maxwellrodriguesferreira/apoio-tratamento:latest
+```
 
 ---
 
-## 7. Etapa 5: Configuração de Ambiente (.env) e Variáveis
+## 8. Etapa 6: Configuração de Ambiente (.env) e Variáveis
 
 Tanto na Raspberry quanto na VPS, crie o diretório oficial da aplicação e o arquivo `.env`:
 
@@ -318,7 +409,7 @@ chmod 600 .env
 
 ---
 
-## 8. Etapa 6: Deploy da Aplicação (Portainer Stacks ou CLI)
+## 9. Etapa 7: Deploy da Aplicação (Portainer Stacks ou CLI)
 
 A imagem multi-arquitetura já está publicada e disponível no Docker Hub:
 ```text
@@ -414,7 +505,7 @@ curl http://localhost:3000/api/health
 
 ---
 
-## 9. Etapa 7: Atualização Contínua Automática com Watchtower
+## 10. Etapa 8: Atualização Contínua Automática com Watchtower
 
 Graças ao contêiner **Watchtower** incluído na stack:
 1. Ao realizar alterações no código e enviar para o GitHub (`git push origin main`), o GitHub Actions compila automaticamente as versões `arm64` e `amd64` e publica no Docker Hub.
@@ -428,14 +519,14 @@ docker logs -f contador-apoio-watchtower
 
 ---
 
-## 10. Etapa 8: Rotinas de Backup, Monitoramento e Manutenção
+## 11. Etapa 9: Rotinas de Backup, Monitoramento e Manutenção
 
-### 10.1. Visualização e Diagnóstico via Portainer
+### 11.1. Visualização e Diagnóstico via Portainer
 * **Status dos Contêineres**: Acesse **Containers** no Portainer para verificar saúde (`healthy`), portas e status.
 * **Logs em Tempo Real**: Clique no ícone de documento ao lado do contêiner `contador-apoio-app` para acompanhar requisições.
 * **Métricas de Consumo**: Clique no ícone de gráfico para visualizar uso de memória RAM e CPU em tempo real.
 
-### 10.2. Backup Automatizado do Volume SQLite Local
+### 11.2. Backup Automatizado do Volume SQLite Local
 Se você utilizar a persistência nativa em SQLite (`contador_apoio_d1_data`), configure um backup diário:
 
 ```bash
@@ -460,12 +551,13 @@ sudo chmod +x /usr/local/bin/backup-apoio-tratamento.sh
 
 ---
 
-## 11. Quadro Comparativo: Raspberry Pi vs VPS
+## 12. Quadro Comparativo: Raspberry Pi vs VPS
 
 | Aspecto | 🍓 Raspberry Pi 4 / 5 | ☁️ VPS Cloud |
 | :--- | :--- | :--- |
 | **Imagem Utilizada** | `maxwellrodriguesferreira/apoio-tratamento:latest` (`arm64`) | `maxwellrodriguesferreira/apoio-tratamento:latest` (`amd64`) |
 | **Hospedagem da Imagem** | Docker Hub Oficial | Docker Hub Oficial |
+| **Compilação CI/CD** | **GitHub Actions** (QEMU + Buildx Multi-Arch) | **GitHub Actions** (QEMU + Buildx Multi-Arch) |
 | **Gerenciador Visual** | **Portainer CE** (porta 9443) | **Portainer CE** (porta 9443) |
 | **Proxy Reverso** | **Nginx Proxy Manager** | **Nginx Proxy Manager** |
 | **Cloudflare Tunnel** | **SIM (Obrigatório)**: Supera o CGNAT residencial/farmácia sem abrir portas | **NÃO (Desnecessário)**: Tráfego direto via IP público IPv4 estático |
@@ -474,4 +566,4 @@ sudo chmod +x /usr/local/bin/backup-apoio-tratamento.sh
 | **Cenário Ideal** | Drogaria única com operação local autônoma e baixo custo | Redes com múltiplas lojas e acessos externos simultâneos |
 
 ---
-*Manual elaborado para implantação de alta disponibilidade e gestão unificada via Portainer e NPM.*
+*Manual elaborado para implantação de alta disponibilidade e gestão unificada via GitHub Actions, Portainer e NPM.*
