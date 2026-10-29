@@ -1,6 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { D1DatabaseClient } from '../db/d1Client.js';
 import { loginRateLimiter } from '../middlewares/rateLimiter.js';
+import {
+  authenticateToken,
+  generateToken,
+  hashPassword,
+  verifyPassword,
+} from '../middlewares/auth.js';
 
 const router = Router();
 
@@ -18,14 +24,13 @@ interface UserRow {
   updated_at: string;
 }
 
-// Verificação resiliente de credenciais de Administrador
+// Verificação de credenciais de Administrador via variáveis de ambiente legítimas
 function checkAdminAuth(email: string, pass: string): boolean {
   const cleanEmail = email.trim().toLowerCase();
   const allowedEmails = [
     process.env.ADMIN_EMAIL,
     process.env.APP_ADMIN_MAIL,
     process.env.DEFAULT_ADMIN_EMAIL,
-    'maxwellferreira@proton.me',
   ]
     .filter(Boolean)
     .map((e) => e!.trim().toLowerCase());
@@ -34,13 +39,16 @@ function checkAdminAuth(email: string, pass: string): boolean {
     process.env.ADMIN_PASSWORD,
     process.env.APP_ADMIN_PASS,
     process.env.DEFAULT_ADMIN_PASSWORD,
-    'Teste123$',
   ].filter(Boolean);
+
+  if (allowedEmails.length === 0 || allowedPasswords.length === 0) {
+    return false;
+  }
 
   return allowedEmails.includes(cleanEmail) && allowedPasswords.includes(pass);
 }
 
-// Verificação resiliente de credenciais de Atendente
+// Verificação de credenciais de Atendente via variáveis de ambiente legítimas
 function checkAtendenteAuth(email: string, pass: string): boolean {
   const cleanEmail = email.trim().toLowerCase();
   const allowedEmails = [
@@ -54,6 +62,10 @@ function checkAtendenteAuth(email: string, pass: string): boolean {
     process.env.ATENDENTE_PASSWORD,
     process.env.DEFAULT_ATENDENTE_PASSWORD,
   ].filter(Boolean);
+
+  if (allowedEmails.length === 0 || allowedPasswords.length === 0) {
+    return false;
+  }
 
   return allowedEmails.includes(cleanEmail) && allowedPasswords.includes(pass);
 }
@@ -73,7 +85,7 @@ router.post('/login', loginRateLimiter, async (req: Request, res: Response): Pro
 
   const cleanEmail = email.trim().toLowerCase();
 
-  // Validação contra credenciais de ambiente ou banco
+  // Validação contra credenciais de ambiente (se provisionadas com segurança)
   const isValidAdminEnv = checkAdminAuth(cleanEmail, password);
   const isValidAtendenteEnv = checkAtendenteAuth(cleanEmail, password);
 
@@ -83,17 +95,18 @@ router.post('/login', loginRateLimiter, async (req: Request, res: Response): Pro
       [cleanEmail]
     );
 
-    // Se usuário não existe no banco mas bate com a credencial padrão de ambiente, provisiona automaticamente no D1
+    // Se usuário não existe no banco mas bate com a credencial explícita de ambiente, provisiona com hash seguro
     if (users.length === 0 && (isValidAdminEnv || isValidAtendenteEnv)) {
       const now = new Date().toISOString();
       const role = isValidAdminEnv ? 'ADMIN' : 'ATENDENTE';
-      const name = isValidAdminEnv ? 'Administrador Geral' : 'Atendente Padrão';
+      const name = isValidAdminEnv ? 'Administrador do Sistema' : 'Atendente Operacional';
       const id = `usr-env-${Date.now()}`;
+      const secureHash = hashPassword(password);
 
       await D1DatabaseClient.execute(
-        `INSERT INTO user_profiles (id, auth_user_id, name, email, role, active, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
-        [id, `env-${role.toLowerCase()}`, name, cleanEmail, role, now, now]
+        `INSERT INTO user_profiles (id, auth_user_id, name, email, password_hash, role, active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+        [id, `env-${role.toLowerCase()}`, name, cleanEmail, secureHash, role, now, now]
       );
 
       users = await D1DatabaseClient.query<UserRow>(
@@ -109,15 +122,25 @@ router.post('/login', loginRateLimiter, async (req: Request, res: Response): Pro
 
     const user = users[0];
 
-    // Validação de senha:
-    // 1. Verifica se bate com credencial de ambiente
-    // 2. Ou se bate com a senha cadastrada no banco
-    // 3. Ou se é a senha padrão do sistema ('SenhaForte@2026')
-    const isPasswordValid =
-      isValidAdminEnv ||
-      isValidAtendenteEnv ||
-      (user.password_hash && user.password_hash === password) ||
-      password === 'SenhaForte@2026';
+    // Validação estrita de senha criptográfica:
+    // 1. Credencial explícita de ambiente
+    // 2. Hash criptográfico no banco com PBKDF2/scrypt
+    let isPasswordValid = false;
+
+    if (isValidAdminEnv || isValidAtendenteEnv) {
+      isPasswordValid = true;
+    } else if (user.password_hash) {
+      isPasswordValid = verifyPassword(password, user.password_hash);
+
+      // Migração e upgrade seguro transparente para PBKDF2 com salt se o hash legado for verificado
+      if (isPasswordValid && !user.password_hash.includes(':')) {
+        const upgradedHash = hashPassword(password);
+        await D1DatabaseClient.execute(
+          'UPDATE user_profiles SET password_hash = ? WHERE id = ?',
+          [upgradedHash, user.id]
+        );
+      }
+    }
 
     if (!isPasswordValid) {
       res.status(401).json({ error: 'E-mail ou senha incorretos.' });
@@ -135,6 +158,14 @@ router.post('/login', loginRateLimiter, async (req: Request, res: Response): Pro
       [now, now, user.id]
     );
 
+    // Emissão de Token de Sessão Assinado (HMAC-SHA256)
+    const token = generateToken({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
+
     res.json({
       user: {
         id: user.id,
@@ -148,6 +179,7 @@ router.post('/login', loginRateLimiter, async (req: Request, res: Response): Pro
         createdAt: user.created_at,
         updatedAt: now,
       },
+      token,
       message: 'Autenticado com sucesso via Cloudflare D1.',
     });
   } catch (error) {
@@ -156,18 +188,16 @@ router.post('/login', loginRateLimiter, async (req: Request, res: Response): Pro
   }
 });
 
-router.get('/me', async (req: Request, res: Response): Promise<void> => {
-  const email = (req.headers['x-user-email'] as string) || (req.query.email as string);
-
-  if (!email) {
+router.get('/me', authenticateToken, async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
     res.status(401).json({ error: 'Sessão não identificada.' });
     return;
   }
 
   try {
     const users = await D1DatabaseClient.query<UserRow>(
-      'SELECT * FROM user_profiles WHERE LOWER(email) = ? LIMIT 1',
-      [email.trim().toLowerCase()]
+      'SELECT * FROM user_profiles WHERE id = ? LIMIT 1',
+      [req.user.id]
     );
 
     if (!users || users.length === 0) {

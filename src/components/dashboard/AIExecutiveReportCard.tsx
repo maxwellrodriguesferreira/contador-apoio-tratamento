@@ -135,8 +135,18 @@ export const AIExecutiveReportCard: React.FC<AIExecutiveReportCardProps> = ({
     return sections;
   };
 
+  const escapeHtml = (unsafe: string): string => {
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
   const formatInline = (str: string) => {
-    return str
+    const safeStr = escapeHtml(str);
+    return safeStr
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-on-surface">$1</strong>')
       .replace(/\*(.*?)\*/g, '<em class="text-on-surface-variant font-medium">$1</em>');
   };

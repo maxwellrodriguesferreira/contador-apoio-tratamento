@@ -1,7 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { D1DatabaseClient } from '../db/d1Client.js';
+import { authenticateToken } from '../middlewares/auth.js';
+import { aiRateLimiter } from '../middlewares/rateLimiter.js';
 
 const router = Router();
+
+// Exige autenticação para todos os endpoints de Inteligência Artificial
+router.use(authenticateToken);
 
 const SYSTEM_PROMPT = `Você é um Consultor Executivo Farmacêutico e Analista Sênior de Inteligência de Negócios e Varejo de Saúde.
 Sua missão é criar um Parecer Executivo vibrante, perspicaz, altamente criativo e ao mesmo tempo rigoroso e profissional sobre os Apoios ao Tratamento da drogaria.
@@ -33,6 +38,13 @@ ESTRUTURA OBRIGATÓRIA DA RESPOSTA EM MARKDOWN:
 2. **Missão Tática:** [Estratégia de incentivo para farmacêuticos e atendentes identificarem pacientes elegíveis]
 3. **Ponto de Controle:** [Métrica prioritária de acompanhamento para o próximo turno]`;
 
+const ALLOWED_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+];
+
 interface AIAnalysisRow {
   id: string;
   analysis_type: string;
@@ -60,8 +72,8 @@ async function getGeminiApiKey(): Promise<string | null> {
   return null;
 }
 
-// Teste de conexão com o Google Gemini
-router.post('/test', async (_req: Request, res: Response): Promise<void> => {
+// Teste de conexão com o Google Gemini — Protegido com rate limiter
+router.post('/test', aiRateLimiter, async (_req: Request, res: Response): Promise<void> => {
   try {
     const apiKey = await getGeminiApiKey();
     if (!apiKey) {
@@ -73,11 +85,14 @@ router.post('/test', async (_req: Request, res: Response): Promise<void> => {
     }
 
     const model = process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.6-flash';
-    const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const testUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
     const geminiRes = await fetch(testUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
       body: JSON.stringify({
         contents: [
           {
@@ -90,7 +105,6 @@ router.post('/test', async (_req: Request, res: Response): Promise<void> => {
     });
 
     if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
       res.status(502).json({
         success: false,
         error: `Falha na autenticação da API Gemini (${geminiRes.status}): Chave inválida ou serviço inacessível.`,
@@ -111,8 +125,8 @@ router.post('/test', async (_req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Geração de Parecer Analítico com Cache Determinístico no Cloudflare D1
-router.post('/analyze', async (req: Request, res: Response): Promise<void> => {
+// Geração de Parecer Analítico com Cache Determinístico no Cloudflare D1 — Protegido com rate limiter
+router.post('/analyze', aiRateLimiter, async (req: Request, res: Response): Promise<void> => {
   const { analysisType, referenceDate, referencePeriod, inputHash, payload, model: requestedModel, forceRefresh } = req.body;
 
   if (!analysisType || !referenceDate || !inputHash) {
@@ -145,7 +159,7 @@ router.post('/analyze', async (req: Request, res: Response): Promise<void> => {
       }
     }
 
-    // 2. Chave e Modelo do Gemini
+    // 2. Chave e Validação de Modelo Gemini
     const apiKey = await getGeminiApiKey();
     if (!apiKey) {
       res.status(400).json({
@@ -154,12 +168,16 @@ router.post('/analyze', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const model = requestedModel || process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.6-flash';
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    const defaultModel = process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.6-flash';
+    const model = requestedModel && ALLOWED_MODELS.includes(requestedModel) ? requestedModel : defaultModel;
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
     const geminiRes = await fetch(geminiUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
       body: JSON.stringify({
         contents: [
           {

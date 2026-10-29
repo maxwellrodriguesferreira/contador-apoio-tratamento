@@ -1,7 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { D1DatabaseClient } from '../db/d1Client.js';
+import { authenticateToken, requireRole } from '../middlewares/auth.js';
 
 const router = Router();
+
+// Exige autenticação e privilégio de ADMINISTRADOR para todas as operações de configuração
+router.use(authenticateToken);
+router.use(requireRole(['ADMIN']));
 
 interface SettingRow {
   key: string;

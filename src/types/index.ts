@@ -11,6 +11,7 @@ export interface UserProfile {
   createdAt: string;
   updatedAt: string;
   lastLoginAt?: string;
+  token?: string;
 }
 
 export interface Attendant {

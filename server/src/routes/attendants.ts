@@ -1,7 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { D1DatabaseClient } from '../db/d1Client.js';
+import { authenticateToken, requireRole } from '../middlewares/auth.js';
 
 const router = Router();
+
+// Exige autenticação para qualquer operação com atendentes
+router.use(authenticateToken);
 
 interface AttendantRow {
   id: string;
@@ -23,6 +27,7 @@ function mapAttendant(row: AttendantRow) {
   };
 }
 
+// Leitura: Permitida para todos os usuários autenticados (ADMIN e ATENDENTE)
 router.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
     const rows = await D1DatabaseClient.query<AttendantRow>(
@@ -34,7 +39,8 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.post('/', async (req: Request, res: Response): Promise<void> => {
+// Criação: Restrita a ADMINISTRADORES
+router.post('/', requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   const { name, code, active = true } = req.body;
 
   if (!name || !code) {
@@ -92,7 +98,8 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.put('/:id', async (req: Request, res: Response): Promise<void> => {
+// Edição: Restrita a ADMINISTRADORES
+router.put('/:id', requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { name, code, active } = req.body;
   const now = new Date().toISOString();
@@ -144,7 +151,8 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+// Exclusão: Restrita a ADMINISTRADORES
+router.delete('/:id', requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   const id = String(req.params.id);
 
   try {

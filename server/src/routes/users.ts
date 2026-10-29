@@ -1,13 +1,19 @@
 import { Router, Request, Response } from 'express';
 import { D1DatabaseClient } from '../db/d1Client.js';
+import { authenticateToken, requireRole, hashPassword } from '../middlewares/auth.js';
 
 const router = Router();
+
+// Exige autenticação e privilégio de ADMINISTRADOR para todas as rotas de gestão de usuários
+router.use(authenticateToken);
+router.use(requireRole(['ADMIN']));
 
 interface UserRow {
   id: string;
   auth_user_id: string | null;
   name: string;
   email: string;
+  password_hash: string | null;
   role: 'ADMIN' | 'ATENDENTE';
   active: number;
   attendant_id: string | null;
@@ -43,7 +49,7 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
 });
 
 router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { name, email, role, active = true, attendantId } = req.body;
+  const { name, email, role, active = true, attendantId, password } = req.body;
 
   if (!name || !email || !role) {
     res.status(400).json({ error: 'Nome, e-mail e cargo são obrigatórios.' });
@@ -54,6 +60,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   const now = new Date().toISOString();
   const id = req.body.id || `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const authUserId = req.body.authUserId || `cf-user-${Date.now()}`;
+  const passwordHash = password ? hashPassword(password) : null;
 
   try {
     const existing = await D1DatabaseClient.query<UserRow>(
@@ -63,12 +70,21 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
     if (existing.length > 0) {
       const existingId = existing[0].id;
-      await D1DatabaseClient.execute(
-        `UPDATE user_profiles
-         SET name = ?, role = ?, active = ?, attendant_id = ?, updated_at = ?
-         WHERE id = ?`,
-        [name.trim(), role, active ? 1 : 0, attendantId || null, now, existingId]
-      );
+      if (passwordHash) {
+        await D1DatabaseClient.execute(
+          `UPDATE user_profiles
+           SET name = ?, role = ?, active = ?, attendant_id = ?, password_hash = ?, updated_at = ?
+           WHERE id = ?`,
+          [name.trim(), role, active ? 1 : 0, attendantId || null, passwordHash, now, existingId]
+        );
+      } else {
+        await D1DatabaseClient.execute(
+          `UPDATE user_profiles
+           SET name = ?, role = ?, active = ?, attendant_id = ?, updated_at = ?
+           WHERE id = ?`,
+          [name.trim(), role, active ? 1 : 0, attendantId || null, now, existingId]
+        );
+      }
 
       res.status(200).json({
         id: existingId,
@@ -85,9 +101,9 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
     }
 
     await D1DatabaseClient.execute(
-      `INSERT INTO user_profiles (id, auth_user_id, name, email, role, active, attendant_id, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, authUserId, name.trim(), cleanEmail, role, active ? 1 : 0, attendantId || null, now, now]
+      `INSERT INTO user_profiles (id, auth_user_id, name, email, password_hash, role, active, attendant_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, authUserId, name.trim(), cleanEmail, passwordHash, role, active ? 1 : 0, attendantId || null, now, now]
     );
 
     res.status(201).json({
@@ -108,7 +124,7 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
 router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   const id = String(req.params.id);
-  const { name, role, active, attendantId } = req.body;
+  const { name, role, active, attendantId, password } = req.body;
   const now = new Date().toISOString();
 
   try {
@@ -128,12 +144,19 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     const newRole = role !== undefined ? role : current.role;
     const newActive = active !== undefined ? (active ? 1 : 0) : current.active;
     const newAttendantId = attendantId !== undefined ? (newRole === 'ATENDENTE' ? attendantId : null) : current.attendant_id;
+    const newPasswordHash = password ? hashPassword(password) : current.password_hash;
+
+    // Impedir que um administrador desative a si próprio
+    if (req.user?.id === targetId && newActive === 0) {
+      res.status(400).json({ error: 'Você não pode desativar a sua própria conta logada.' });
+      return;
+    }
 
     await D1DatabaseClient.execute(
       `UPDATE user_profiles
-       SET name = ?, role = ?, active = ?, attendant_id = ?, updated_at = ?
+       SET name = ?, role = ?, active = ?, attendant_id = ?, password_hash = ?, updated_at = ?
        WHERE id = ?`,
-      [newName, newRole, newActive, newAttendantId, now, targetId]
+      [newName, newRole, newActive, newAttendantId, newPasswordHash, now, targetId]
     );
 
     res.json({
@@ -169,6 +192,13 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
     }
 
     const targetId = users[0].id;
+
+    // Impedir que o administrador exclua a si próprio
+    if (req.user?.id === targetId) {
+      res.status(400).json({ error: 'Você não pode excluir o seu próprio usuário logado.' });
+      return;
+    }
+
     await D1DatabaseClient.execute('DELETE FROM user_profiles WHERE id = ?', [targetId]);
     res.json({ success: true, message: 'Usuário excluído com sucesso do Cloudflare D1.' });
   } catch (error) {

@@ -58,6 +58,9 @@ export async function apiRequest<T>(
     if (storedSession) {
       try {
         const user = JSON.parse(storedSession);
+        if (user?.token) {
+          headers['Authorization'] = `Bearer ${user.token}`;
+        }
         if (user?.email) {
           headers['x-user-email'] = user.email;
         }

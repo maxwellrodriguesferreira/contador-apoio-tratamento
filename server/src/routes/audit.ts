@@ -1,7 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { D1DatabaseClient } from '../db/d1Client.js';
+import { authenticateToken, requireRole } from '../middlewares/auth.js';
 
 const router = Router();
+
+// Exige autenticação para todos os endpoints de auditoria
+router.use(authenticateToken);
 
 interface AuditLogRow {
   id: string;
@@ -27,8 +31,8 @@ interface SupportAuditRow {
   created_at: string;
 }
 
-// Logs Globais do Sistema
-router.get('/logs', async (_req: Request, res: Response): Promise<void> => {
+// Logs Globais do Sistema — Restrito a ADMINISTRADORES
+router.get('/logs', requireRole(['ADMIN']), async (_req: Request, res: Response): Promise<void> => {
   try {
     const rows = await D1DatabaseClient.query<AuditLogRow>(
       'SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 500'
@@ -53,12 +57,17 @@ router.get('/logs', async (_req: Request, res: Response): Promise<void> => {
 });
 
 router.post('/logs', async (req: Request, res: Response): Promise<void> => {
-  const { userId, userName, userRole, action, entityType, entityId, metadata, ipAddress } = req.body;
+  const { action, entityType, entityId, metadata } = req.body;
+
+  // Garante que o usuário gravado no log corresponde estritamente à sessão autenticada
+  const userId = req.user?.id || req.body.userId || 'unknown-user';
+  const userName = req.user?.name || req.body.userName || 'Usuário Desconhecido';
+  const userRole = req.user?.role || req.body.userRole || 'ATENDENTE';
 
   const now = new Date().toISOString();
   const id = req.body.id || `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const metaStr = metadata ? JSON.stringify(metadata) : null;
-  const clientIp = ipAddress || req.ip || '127.0.0.1';
+  const clientIp = req.ip || req.socket.remoteAddress || '127.0.0.1';
 
   try {
     await D1DatabaseClient.execute(
@@ -73,8 +82,8 @@ router.post('/logs', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Auditoria de Apoios (OldValue / NewValue)
-router.get('/supports', async (_req: Request, res: Response): Promise<void> => {
+// Auditoria de Apoios (OldValue / NewValue) — Restrito a ADMINISTRADORES
+router.get('/supports', requireRole(['ADMIN']), async (_req: Request, res: Response): Promise<void> => {
   try {
     const rows = await D1DatabaseClient.query<SupportAuditRow>(
       'SELECT * FROM treatment_support_audits ORDER BY created_at DESC LIMIT 1000'
@@ -96,8 +105,11 @@ router.get('/supports', async (_req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.post('/supports', async (req: Request, res: Response): Promise<void> => {
-  const { treatmentSupportId, userId, userName, action, oldValue, newValue } = req.body;
+router.post('/supports', requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
+  const { treatmentSupportId, action, oldValue, newValue } = req.body;
+
+  const userId = req.user?.id || req.body.userId || 'unknown-user';
+  const userName = req.user?.name || req.body.userName || 'ADMIN';
 
   const now = new Date().toISOString();
   const id = req.body.id || `audit-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;

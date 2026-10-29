@@ -16,7 +16,9 @@ if (redisUrl || redisHost) {
 
     const clientOptions = {
       maxRetriesPerRequest: 3,
-      tls: isUpstashOrTls ? { rejectUnauthorized: false } : undefined,
+      tls: isUpstashOrTls
+        ? { rejectUnauthorized: process.env.REDIS_REJECT_UNAUTHORIZED === 'false' ? false : true }
+        : undefined,
       retryStrategy(times: number) {
         // Tenta reconectar a cada 1s a 3s
         return Math.min(times * 200, 3000);
@@ -80,6 +82,41 @@ export const loginRateLimiter = rateLimit({
       error: 'Muitas tentativas incorretas de login. Por motivos de segurança, tente novamente após 15 minutos.',
       code: 'RATE_LIMIT_EXCEEDED',
       retryAfterMinutes: 15,
+    });
+  },
+});
+
+/**
+ * Middleware de Rate Limit para chamadas de Inteligência Artificial (Google Gemini).
+ * Previne esgotamento de quota e custos abusivos (Financial Denial of Service).
+ */
+export const aiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 30, // Máximo de 30 chamadas por IP/usuário a cada 15 minutos
+  standardHeaders: true,
+  legacyHeaders: false,
+  passOnStoreError: true,
+  handler: (_req, res) => {
+    res.status(429).json({
+      error: 'Limite de requisições de Inteligência Artificial excedido. Tente novamente em alguns minutos.',
+      code: 'AI_RATE_LIMIT_EXCEEDED',
+    });
+  },
+});
+
+/**
+ * Middleware de Rate Limit Global para proteção contra DoS em rotas da API.
+ */
+export const apiGeneralRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 300, // 300 requisições por minuto por IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  passOnStoreError: true,
+  handler: (_req, res) => {
+    res.status(429).json({
+      error: 'Volume excessivo de requisições. Aguarde um instante antes de tentar novamente.',
+      code: 'TOO_MANY_REQUESTS',
     });
   },
 });

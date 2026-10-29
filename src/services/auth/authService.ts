@@ -58,14 +58,17 @@ export class AuthService {
 
     // 1. Tentar autenticação via API do Cloudflare D1
     try {
-      const response = await apiRequest<{ user: UserProfile; message: string }>(
+      const response = await apiRequest<{ user: UserProfile; token?: string; message: string }>(
         '/auth/login',
         'POST',
         { email: cleanEmail, password }
       );
 
       if (response?.user) {
-        const user = response.user;
+        const user: UserProfile = {
+          ...response.user,
+          token: response.token,
+        };
         this.setCurrentUser(user);
 
         // Atualiza perfil no cache local

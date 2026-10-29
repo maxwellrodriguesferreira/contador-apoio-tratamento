@@ -30,23 +30,23 @@ services:
       - DATABASE_DIR=/app/data
 
       # Upstash Redis & Rate Limiting
-      - REDIS_URL=${REDIS_URL:-rediss://default:gQAAAAAAA6xGAAIgcDE2ZTBlZDM1NjhjMDI0MWY4OWI1ODE5ZjYxNGVlMGU2Nw@endless-satyr-240710.upstash.io:6379}
+      - REDIS_URL=${REDIS_URL:-}
       - LOGIN_RATE_LIMIT_MAX=${LOGIN_RATE_LIMIT_MAX:-5}
       - LOGIN_RATE_LIMIT_WINDOW_MS=${LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
 
       # Cloudflare D1
-      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-ef579acea3be117e010eafc168ca1c2f}
-      - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-9e9cb6e6-6981-4357-9c76-acaff75f7377}
-      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-cfut_fn1ipsv0lbMja3qrbujECzeKBfMHECb16ijzxHVGa54db323}
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
+      - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
 
       # Google Gemini AI
-      - GEMINI_API_KEY=${GEMINI_API_KEY:-AQ.Ab8RN6JcKDz1sNUT_DCJAVoVzGdlyAXddYM_aqhXCwMNrgX8xA}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.6-flash}
 
-      # Credenciais Padrão
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-maxwellferreira@proton.me}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-Teste123$}
-      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-atendente@suaempresa.com.br}
+      # Credenciais Padrão (Injetadas via .env ou Portainer Secrets)
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-}
       - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-}
 
     volumes:

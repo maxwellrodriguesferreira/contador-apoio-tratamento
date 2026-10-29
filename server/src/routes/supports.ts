@@ -1,7 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { D1DatabaseClient } from '../db/d1Client.js';
+import { authenticateToken, requireRole } from '../middlewares/auth.js';
 
 const router = Router();
+
+// Exige autenticação para todos os endpoints de apoios ao tratamento
+router.use(authenticateToken);
 
 interface SupportRow {
   id: string;
@@ -35,6 +39,7 @@ function mapSupport(row: SupportRow) {
   };
 }
 
+// Leitura: Permitida a usuários autenticados (ADMIN e ATENDENTE)
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   const includeDeleted = req.query.includeDeleted === 'true';
 
@@ -50,8 +55,9 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.post('/', async (req: Request, res: Response): Promise<void> => {
-  const { date, attendantId, quantity, observation, createdBy, deletedAt, deletedBy, version } = req.body;
+// Criação: Restrita a ADMINISTRADORES (Regras RBAC do sistema)
+router.post('/', requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
+  const { date, attendantId, quantity, observation, deletedAt, deletedBy, version } = req.body;
 
   if (!date || !attendantId || quantity === undefined) {
     res.status(400).json({ error: 'Data, atendente e quantidade são obrigatórios.' });
@@ -66,7 +72,8 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
 
   const now = new Date().toISOString();
   const id = req.body.id || `sup-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-  const author = createdBy || 'ADMIN';
+  // Vincula o autor à identidade autenticada no servidor
+  const author = req.user ? `${req.user.name} (${req.user.role})` : 'ADMIN';
   const recVersion = typeof version === 'number' && version > 0 ? version : 1;
 
   try {
@@ -125,9 +132,10 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.put('/:id', async (req: Request, res: Response): Promise<void> => {
+// Edição: Restrita a ADMINISTRADORES
+router.put('/:id', requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const { date, attendantId, quantity, observation, updatedBy, expectedVersion, deletedAt, deletedBy } = req.body;
+  const { date, attendantId, quantity, observation, expectedVersion, deletedAt, deletedBy } = req.body;
   const now = new Date().toISOString();
 
   try {
@@ -143,7 +151,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
 
     const current = rows[0];
 
-    // Concorrência Otimista (Regra 30)
+    // Concorrência Otimista
     if (expectedVersion !== undefined && expectedVersion !== current.version) {
       res.status(409).json({
         error: 'Conflito de versão: este registro foi modificado por outro usuário. Atualize a página e tente novamente.',
@@ -155,7 +163,7 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
     const newAttendantId = attendantId || current.attendant_id;
     const newQuantity = quantity !== undefined ? parseInt(String(quantity), 10) : current.quantity;
     const newObservation = observation !== undefined ? (observation || null) : current.observation;
-    const author = updatedBy || current.updated_by || 'ADMIN';
+    const author = req.user ? `${req.user.name} (${req.user.role})` : current.updated_by || 'ADMIN';
     const newDeletedAt = deletedAt !== undefined ? (deletedAt || null) : current.deleted_at;
     const newDeletedBy = deletedBy !== undefined ? (deletedBy || null) : current.deleted_by;
     const nextVersion = current.version + 1;
@@ -186,9 +194,10 @@ router.put('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
+// Exclusão (Soft Delete): Restrita a ADMINISTRADORES
+router.delete('/:id', requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const deletedBy = (req.body && req.body.deletedBy) || 'ADMIN';
+  const deletedBy = req.user ? `${req.user.name} (${req.user.role})` : 'ADMIN';
   const now = new Date().toISOString();
 
   try {
@@ -224,9 +233,10 @@ router.delete('/:id', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-router.post('/:id/restore', async (req: Request, res: Response): Promise<void> => {
+// Restauração: Restrita a ADMINISTRADORES
+router.post('/:id/restore', requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const restoredBy = (req.body && req.body.restoredBy) || 'ADMIN';
+  const restoredBy = req.user ? `${req.user.name} (${req.user.role}) [RESTAURADO]` : 'ADMIN [RESTAURADO]';
   const now = new Date().toISOString();
 
   try {
