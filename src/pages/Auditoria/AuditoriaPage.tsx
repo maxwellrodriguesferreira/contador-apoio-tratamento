@@ -10,9 +10,11 @@ import { Select } from '../../components/common/Select';
 import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import { CloudSyncService } from '../../services/api/cloudSyncService';
+import { useToast } from '../../contexts/ToastContext';
 
 export const AuditoriaPage: React.FC = () => {
   const { isAdmin } = useAuth();
+  const { showToast } = useToast();
 
   const [activeTab, setActiveTab] = useState<'supports' | 'system'>('supports');
   const [supportAudits, setSupportAudits] = useState<TreatmentSupportAudit[]>([]);
@@ -23,6 +25,9 @@ export const AuditoriaPage: React.FC = () => {
   const [actionFilter, setActionFilter] = useState('');
 
   const [viewingAudit, setViewingAudit] = useState<TreatmentSupportAudit | null>(null);
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+  const [clearTarget, setClearTarget] = useState<'current' | 'all'>('current');
+  const [isClearing, setIsClearing] = useState(false);
 
   const loadData = useCallback(() => {
     setSupportAudits(AuditService.getSupportAudits());
@@ -65,6 +70,28 @@ export const AuditoriaPage: React.FC = () => {
     }
     return true;
   });
+
+  const handleConfirmClear = async () => {
+    setIsClearing(true);
+    try {
+      if (clearTarget === 'all') {
+        await AuditService.clearAllLogs();
+        showToast('Todos os logs de auditoria foram limpos com sucesso.', 'success');
+      } else if (activeTab === 'supports') {
+        await AuditService.clearSupportAudits();
+        showToast('Histórico de auditoria de apoios limpo com sucesso.', 'success');
+      } else {
+        await AuditService.clearSystemLogs();
+        showToast('Histórico de logs do sistema limpo com sucesso.', 'success');
+      }
+      loadData();
+      setIsClearModalOpen(false);
+    } catch {
+      showToast('Erro ao limpar histórico de logs.', 'error');
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   if (!isAdmin) {
     return (
@@ -133,6 +160,19 @@ export const AuditoriaPage: React.FC = () => {
           </div>
           <Button variant="ghost" size="sm" onClick={loadData} icon="refresh">
             Atualizar
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => {
+              setClearTarget('current');
+              setIsClearModalOpen(true);
+            }}
+            icon="delete_sweep"
+            disabled={activeTab === 'supports' ? supportAudits.length === 0 : systemLogs.length === 0}
+            title="Limpar histórico de registros de logs"
+          >
+            Limpar Logs
           </Button>
         </div>
       </div>
@@ -315,6 +355,94 @@ export const AuditoriaPage: React.FC = () => {
                   <span className="text-outline italic">Nenhum (Exclusão)</span>
                 )}
               </div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal de Confirmação para Limpeza de Logs */}
+      {isClearModalOpen && (
+        <Modal
+          isOpen={isClearModalOpen}
+          onClose={() => !isClearing && setIsClearModalOpen(false)}
+          title="Limpar Histórico de Auditoria"
+          subtitle="Atenção: Esta ação é definitiva e removerá permanentemente os registros selecionados."
+          maxWidth="md"
+          footer={
+            <>
+              <Button
+                variant="outline"
+                onClick={() => setIsClearModalOpen(false)}
+                disabled={isClearing}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleConfirmClear}
+                isLoading={isClearing}
+                loadingText="Limpando..."
+                icon="delete_forever"
+              >
+                Confirmar Limpeza
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4 text-xs">
+            <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-start gap-3">
+              <span className="material-symbols-outlined text-rose-600 text-[22px] shrink-0">
+                warning
+              </span>
+              <div className="text-rose-800">
+                <p className="font-bold">Ação Crítica de Exclusão</p>
+                <p className="mt-0.5 text-[11px] text-rose-700 leading-relaxed">
+                  Os registros selecionados serão excluídos permanentemente da persistência (Cloudflare D1 / Local) e não poderão ser recuperados.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="font-bold text-on-surface">O que você deseja limpar?</span>
+              <label className="flex items-start gap-2.5 p-3 rounded-lg border border-outline-variant/40 hover:bg-surface-container-low cursor-pointer transition-colors">
+                <input
+                  type="radio"
+                  name="clearOption"
+                  value="current"
+                  checked={clearTarget === 'current'}
+                  onChange={() => setClearTarget('current')}
+                  className="mt-0.5 text-primary focus:ring-primary cursor-pointer"
+                />
+                <div className="flex flex-col">
+                  <span className="font-semibold text-on-surface">
+                    {activeTab === 'supports'
+                      ? `Somente Auditoria de Apoios (${supportAudits.length} registros)`
+                      : `Somente Logs do Sistema (${systemLogs.length} registros)`}
+                  </span>
+                  <span className="text-[11px] text-on-surface-variant">
+                    Limpa apenas os registros da visualização ativa no momento.
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2.5 p-3 rounded-lg border border-outline-variant/40 hover:bg-surface-container-low cursor-pointer transition-colors">
+                <input
+                  type="radio"
+                  name="clearOption"
+                  value="all"
+                  checked={clearTarget === 'all'}
+                  onChange={() => setClearTarget('all')}
+                  className="mt-0.5 text-primary focus:ring-primary cursor-pointer"
+                />
+                <div className="flex flex-col">
+                  <span className="font-semibold text-on-surface">
+                    Limpar Ambos os Históricos (Total: {supportAudits.length + systemLogs.length} registros)
+                  </span>
+                  <span className="text-[11px] text-on-surface-variant">
+                    Expurga tanto os logs de mutação de apoios quanto os logs de acesso e eventos do sistema.
+                  </span>
+                </div>
+              </label>
             </div>
           </div>
         </Modal>

@@ -129,4 +129,24 @@ router.post('/supports', requireRole(['ADMIN']), async (req: Request, res: Respo
   }
 });
 
+// Limpar Logs Globais do Sistema — Restrito a ADMINISTRADORES
+router.delete('/logs', requireRole(['ADMIN']), async (_req: Request, res: Response): Promise<void> => {
+  try {
+    await D1DatabaseClient.execute('DELETE FROM audit_logs');
+    res.json({ success: true, message: 'Histórico de logs do sistema limpo com sucesso.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao limpar histórico de logs de auditoria no Cloudflare D1.' });
+  }
+});
+
+// Limpar Auditoria de Apoios — Restrito a ADMINISTRADORES
+router.delete('/supports', requireRole(['ADMIN']), async (_req: Request, res: Response): Promise<void> => {
+  try {
+    await D1DatabaseClient.execute('DELETE FROM treatment_support_audits');
+    res.json({ success: true, message: 'Histórico de auditoria de apoios limpo com sucesso.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Erro ao limpar histórico de auditoria de apoios no Cloudflare D1.' });
+  }
+});
+
 export default router;

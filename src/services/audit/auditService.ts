@@ -77,4 +77,26 @@ export class AuditService {
     }
     return audits;
   }
+
+  static async clearSystemLogs(): Promise<void> {
+    LocalDatabase.clearAuditLogs();
+    await CloudSyncService.clearAuditLogs();
+    CloudSyncService.notifyDataChanged();
+  }
+
+  static async clearSupportAudits(): Promise<void> {
+    LocalDatabase.clearSupportAudits();
+    await CloudSyncService.clearSupportAudits();
+    CloudSyncService.notifyDataChanged();
+  }
+
+  static async clearAllLogs(): Promise<void> {
+    LocalDatabase.clearAuditLogs();
+    LocalDatabase.clearSupportAudits();
+    await Promise.all([
+      CloudSyncService.clearAuditLogs(),
+      CloudSyncService.clearSupportAudits(),
+    ]);
+    CloudSyncService.notifyDataChanged();
+  }
 }

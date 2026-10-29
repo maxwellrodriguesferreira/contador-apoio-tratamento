@@ -199,4 +199,20 @@ export class CloudSyncService {
       console.warn('Erro ao sincronizar auditoria de apoio no Cloudflare D1:', e);
     }
   }
+
+  static async clearAuditLogs(): Promise<void> {
+    try {
+      await apiRequest<{ success: boolean }>('/audit/logs', 'DELETE');
+    } catch (e) {
+      console.warn('Erro ao limpar logs de auditoria no Cloudflare D1:', e);
+    }
+  }
+
+  static async clearSupportAudits(): Promise<void> {
+    try {
+      await apiRequest<{ success: boolean }>('/audit/supports', 'DELETE');
+    } catch (e) {
+      console.warn('Erro ao limpar auditoria de apoios no Cloudflare D1:', e);
+    }
+  }
 }

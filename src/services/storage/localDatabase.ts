@@ -105,6 +105,10 @@ export class LocalDatabase {
     this.set(APP_CONFIG.storageKeys.supportAudits, audits);
   }
 
+  static clearSupportAudits(): void {
+    this.saveSupportAudits([]);
+  }
+
   // System Audit Logs (Zerado para produção)
   static getAuditLogs(): AuditLog[] {
     return this.get<AuditLog[]>(APP_CONFIG.storageKeys.auditLogs, []);
@@ -112,6 +116,10 @@ export class LocalDatabase {
 
   static saveAuditLogs(logs: AuditLog[]): void {
     this.set(APP_CONFIG.storageKeys.auditLogs, logs);
+  }
+
+  static clearAuditLogs(): void {
+    this.saveAuditLogs([]);
   }
 
   // Goals (Zerado para produção)
