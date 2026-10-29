@@ -82,6 +82,7 @@ export type AuditLogAction =
   | 'SUPPORT_RESTORED'
   | 'GOAL_CREATED'
   | 'GOAL_UPDATED'
+  | 'GOAL_DELETED'
   | 'AI_CONFIG_UPDATED'
   | 'AI_API_KEY_UPDATED'
   | 'AI_API_KEY_REMOVED'
