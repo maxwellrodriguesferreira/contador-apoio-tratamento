@@ -222,32 +222,119 @@ Como a Raspberry Pi opera conectada ao roteador da farmácia sem IP público fix
 Executar o conector via **Docker** é o método mais simples, seguro e limpo, pois dispensa a instalação de pacotes no sistema operacional, reinicia automaticamente no boot e pode ser gerenciado diretamente pelo **Portainer**.
 
 ```text
-[Cliente / Celular] ──HTTPS──> [Cloudflare Edge (WAF/DDoS)] ──Túnel Criptografado──> [Contêiner cloudflared na RPi] ──(rede-proxy)──> [NPM / App:3000]
+[Cliente / Celular] ──HTTPS (SSL Cloudflare)──> [Cloudflare Edge (WAF/DDoS)] 
+                                                        │
+                                            (Túnel Seguro Outbound)
+                                                        ▼
+                                         [Contêiner cloudflared na RPi] 
+                                                        │ (HTTP interno na rede-proxy)
+                                                        ▼
+                                            [Nginx Proxy Manager:80] 
+                                                        │ (HTTP interno na rede-proxy)
+                                                        ▼
+                                            [contador-apoio-app:3000]
 ```
 
-#### Passo 1: Criar o Túnel no Painel Cloudflare Zero Trust:
-1. Acesse o painel [Cloudflare Zero Trust](https://one.dash.cloudflare.com/).
-2. Vá em **Networks** ➔ **Tunnels** ➔ Clique em **Add a Tunnel**.
-3. Selecione o tipo de conector **Cloudflared** e dê um nome (ex: `drogaria-rpi4-tunnel`).
-4. Na tela de instalação, selecione a aba **Docker**.
-5. O painel exibirá um comando contendo o seu token exclusivo (uma longa chave alfanumérica). Copie o valor do token após `--token`.
+> 💡 **Como funciona o Certificado SSL neste cenário**:  
+> Você **não precisa gerar certificado SSL Let's Encrypt no Nginx Proxy Manager (NPM)**.  
+> A **Cloudflare emite e renova o certificado SSL/TLS automaticamente na borda (*Universal SSL*)**. O visitante acessa `https://apoio.suadrogaria.com.br` de forma 100% criptografada. O conector `cloudflared` recebe a requisição segura e a entrega internamente ao NPM via HTTP na rede Docker privada (`rede-proxy`). No painel do NPM, a aba SSL do host pode permanecer em **None**.
 
-#### Passo 2: Executar o Contêiner do Cloudflare Tunnel:
-Você pode executar o túnel via terminal ou pelo Portainer:
+---
 
-**Opção A: Via Terminal (Comando Docker Direto):**
-Execute na Raspberry Pi (o contêiner será automaticamente anexado à rede `rede-proxy`):
+#### Método 1: Configuração 100% via Linha de Comando (CLI + Docker)
+
+Neste método, você realiza o login, a criação do túnel e o apontamento do domínio pessoal no DNS da Cloudflare **direto pelo terminal**:
+
+##### 1. Autenticar a CLI da Cloudflare via Docker:
+Crie os diretórios de configuração e execute o login:
 ```bash
-docker run -d \
-  --name cloudflared-tunnel \
-  --restart unless-stopped \
-  --network rede-proxy \
-  cloudflare/cloudflared:latest tunnel --no-autoupdate run --token SEU_TOKEN_AQUI
+mkdir -p ~/.cloudflared
+sudo mkdir -p /opt/cloudflared && cd /opt/cloudflared
+
+# Executa o login temporário
+docker run -it --rm \
+  -v ~/.cloudflared:/root/.cloudflared \
+  cloudflare/cloudflared:latest tunnel login
+```
+* O terminal exibirá uma URL de autorização (ex: `https://dash.cloudflare.com/argotunnel?...`).
+* Abra a URL no navegador, escolha o seu domínio pessoal e autorize.
+* O arquivo de certificado `cert.pem` será baixado automaticamente em `~/.cloudflared/cert.pem`.
+
+##### 2. Criar o Túnel via CLI:
+```bash
+docker run --rm \
+  -v ~/.cloudflared:/root/.cloudflared \
+  cloudflare/cloudflared:latest tunnel create apoio-tunnel
+```
+O comando gerará o arquivo de credenciais e exibirá o UUID do túnel:
+```text
+Created tunnel apoio-tunnel with id 12345678-abcd-1234-abcd-1234567890ab
 ```
 
-**Opção B: Via Portainer (Stack dedicada):**
-1. Acesse o Portainer (`https://IP_DA_RASPBERRY:9443`) ➔ **Stacks** ➔ **Add stack** (nome: `cloudflare-tunnel`).
-2. Cole o compose:
+##### 3. Apontar o Domínio Pessoal no DNS via CLI:
+Este comando cria **automaticamente o registro CNAME** no painel de DNS da Cloudflare apontando seu subdomínio para o túnel:
+```bash
+docker run --rm \
+  -v ~/.cloudflared:/root/.cloudflared \
+  cloudflare/cloudflared:latest tunnel route dns apoio-tunnel apoio.suadrogaria.com.br
+```
+
+##### 4. Criar o Arquivo de Rotas (`config.yml`):
+Copie as credenciais para `/opt/cloudflared` e defina o direcionamento para o Nginx Proxy Manager:
+```bash
+sudo cp ~/.cloudflared/*.json /opt/cloudflared/tunnel-credentials.json
+sudo nano /opt/cloudflared/config.yml
+```
+
+Cole o conteúdo (substitua pelo seu UUID):
+```yaml
+tunnel: 12345678-abcd-1234-abcd-1234567890ab
+credentials-file: /etc/cloudflared/tunnel-credentials.json
+
+ingress:
+  # Encaminha o domínio público para o Nginx Proxy Manager na rede Docker
+  - hostname: apoio.suadrogaria.com.br
+    service: http://nginx-proxy-manager:80
+
+  # Regra obrigatória de fallback (404)
+  - service: http_status:404
+```
+
+##### 5. Subir o Contêiner do Túnel via Docker Compose:
+Crie o arquivo `/opt/cloudflared/docker-compose.yml`:
+```yaml
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    volumes:
+      - ./config.yml:/etc/cloudflared/config.yml:ro
+      - ./tunnel-credentials.json:/etc/cloudflared/tunnel-credentials.json:ro
+    networks:
+      - rede-proxy
+
+networks:
+  rede-proxy:
+    external: true
+```
+
+Inicie o túnel:
+```bash
+docker compose up -d
+```
+
+---
+
+#### Método 2: Configuração via Token do Painel Zero Trust + Portainer
+
+Se você preferir obter o token do túnel pelo painel visual da Cloudflare e executá-lo via Portainer:
+
+1. Acesse [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) ➔ **Networks** ➔ **Tunnels** ➔ **Add a Tunnel**.
+2. Escolha **Cloudflared**, defina o nome e selecione o ambiente **Docker**.
+3. Copie o token exclusivo exibido após `--token`.
+4. No **Portainer** (`https://IP_DA_RASPBERRY:9443`) ➔ **Stacks** ➔ **Add stack** (nome: `cloudflare-tunnel`):
    ```yaml
    services:
      tunnel:
@@ -262,22 +349,22 @@ docker run -d \
      rede-proxy:
        external: true
    ```
-3. Clique em **Deploy the stack**.
+5. No painel da Cloudflare (aba **Public Hostname**), aponte:
+   * **Hostname**: `apoio.suadrogaria.com.br`
+   * **Service**: `HTTP` | **URL**: `nginx-proxy-manager:80`
 
-#### Passo 3: Configurar o Domínio Público (Public Hostname):
-De volta ao painel da Cloudflare, na aba **Public Hostname**:
-* **Subdomain**: `apoio`
-* **Domain**: `suadrogaria.com.br` (domínio gerenciado na Cloudflare)
-* **Service Type**: `HTTP`
-* **URL**: Como o contêiner `cloudflared-tunnel` está na rede `rede-proxy`, você pode apontar diretamente pelo nome do serviço Docker:
-  * `http://nginx-proxy-manager:80` *(para passar pelo Nginx Proxy Manager)*
-  * ou `http://contador-apoio-app:3000` *(diretamente para a aplicação)*
+---
 
-#### Vantagens do Método Docker:
-* ✅ **Zero Poluição no Host**: Nenhum pacote `.deb` instalado no Raspberry Pi OS.
-* ✅ **Monitoramento pelo Portainer**: Acompanhe o status do túnel e logs de conexão em tempo real pela web.
-* ✅ **Resiliência Total**: Reinicia automaticamente em caso de reinicialização ou queda de energia da drogaria (`restart: unless-stopped`).
-* ✅ **SSL e DDoS Automáticos**: Tráfego criptografado sem abrir portas no roteador da farmácia.
+#### Passo Final: Cadastrar o Proxy Host no Nginx Proxy Manager (Raspberry Pi)
+No painel do NPM (`http://IP_DA_RASPBERRY:81`):
+1. Acesse **Hosts** ➔ **Proxy Hosts** ➔ **Add Proxy Host**:
+   * **Domain Names**: `apoio.suadrogaria.com.br`
+   * **Scheme**: `http`
+   * **Forward Hostname / IP**: `contador-apoio-app`
+   * **Forward Port**: `3000`
+   * Marque: **Block Common Exploits**, **Websockets Support** e **Cache Assets**.
+2. **Aba SSL**: Mantenha em **None** (o SSL já é garantido na borda da Cloudflare).
+3. Clique em **Save**. Pronto! Seu sistema estará operando com SSL A+ e proteção DDoS ativa.
 
 ---
 
