@@ -64,6 +64,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
   const [isLoadingDailyAI, setIsLoadingDailyAI] = useState(false);
   const [isLoadingMonthlyAI, setIsLoadingMonthlyAI] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadData = useCallback(() => {
     const s = SupportService.getAll(false);
@@ -75,6 +76,21 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
     setAttendants(a);
     setGoals(g);
   }, []);
+
+  const handleRefreshData = async () => {
+    setIsRefreshing(true);
+    try {
+      await CloudSyncService.syncAllFromCloud();
+      loadData();
+      showToast('Dados sincronizados e atualizados com sucesso.', 'success', 'Sincronização Concluída');
+    } catch (err: unknown) {
+      loadData();
+      const msg = err instanceof Error ? err.message : 'Falha ao sincronizar com o banco.';
+      showToast(msg, 'warning', 'Sincronização Offline');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     loadData();
@@ -226,7 +242,9 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           <Button
             variant="outline"
             size="sm"
-            onClick={loadData}
+            onClick={handleRefreshData}
+            isLoading={isRefreshing}
+            loadingText="Atualizando..."
             icon="sync"
             className="hover:text-primary"
           >
@@ -276,7 +294,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
             <span>+</span>
             <span className="text-secondary">NA ROTINA</span>
             <span>=</span>
-            <span className="text-emerald-700 font-extrabold">TOTAL GERAL</span>
+            <span className="text-emerald-700 dark:text-emerald-400 font-extrabold">TOTAL GERAL</span>
           </div>
         </div>
 
@@ -334,22 +352,30 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           </div>
 
           {/* Card 3: Total Geral de Serviços */}
-          <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 via-surface-container-low to-surface-container-low border-2 border-emerald-500/40 flex flex-col justify-between shadow-sm">
+          <div className="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 via-surface-container-low to-surface-container-low border-2 border-emerald-500/40 dark:border-emerald-500/30 flex flex-col justify-between shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-sm">
                   <span className="material-symbols-outlined text-[18px]">functions</span>
                 </div>
                 <div>
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 block">Total Geral de Serviços</span>
-                  <span className="text-[10px] text-emerald-800">Apoio + Na Rotina</span>
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 dark:text-emerald-300 block">Total Geral de Serviços</span>
+                  <span className="text-[10px] text-emerald-800 dark:text-emerald-400">Apoio + Na Rotina</span>
                 </div>
               </div>
-              <span className="text-[10px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full">Consolidado</span>
+              <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-extrabold px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-800/40">Consolidado</span>
             </div>
             <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-emerald-500/20">
               <div>
-                <span className="text-2xl font-extrabold text-emerald-950">{consolidatedMetrics.todayTotalServices}</span>
+                <span className="text-2xl font-extrabold text-emerald-950 dark:text-emerald-200">{consolidatedMetrics.todayTotalServices}</span>
+                <span className="text-xs text-emerald-800 dark:text-emerald-400 ml-1 font-medium">hoje ({consolidatedMetrics.todayTreatmentSupport} + {consolidatedMetrics.todayRoutineCare})</span>
+              </div>
+              <div className="text-right">
+                <span className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{consolidatedMetrics.monthTotalServices}</span>
+                <span className="text-xs text-emerald-800 dark:text-emerald-400 ml-1 font-medium">no mês ({consolidatedMetrics.monthTreatmentSupport} + {consolidatedMetrics.monthRoutineCare})</span>
+              </div>
+            </div>
+          </div>
                 <span className="text-xs text-emerald-800 ml-1 font-medium">hoje ({consolidatedMetrics.todayTreatmentSupport} + {consolidatedMetrics.todayRoutineCare})</span>
               </div>
               <div className="text-right">
@@ -496,17 +522,17 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 Comparativo diário entre Apoio ao Tratamento, Na Rotina e meta diária ({metrics.todayGoal})
               </p>
             </div>
-            <div className="flex items-center gap-2 text-[11px] font-semibold">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 text-primary">
-                <span className="w-2 h-2 rounded-full bg-[#00236f] inline-block"></span>
+            <div className="flex items-center gap-2 text-[11px] font-semibold flex-wrap">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#2563eb] inline-block shadow-sm"></span>
                 Apoio: {consolidatedMetrics.todayTreatmentSupport}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary/15 text-secondary">
-                <span className="w-2 h-2 rounded-full bg-[#006398] inline-block"></span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/50 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#9333ea] inline-block shadow-sm"></span>
                 Rotina: {consolidatedMetrics.todayRoutineCare}
               </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700">
-                <span className="w-2 h-2 rounded-full bg-[#059669] inline-block"></span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/50 font-bold">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#059669] inline-block shadow-sm"></span>
                 Total: {consolidatedMetrics.todayTotalServices}
               </span>
             </div>
@@ -514,7 +540,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={dailyEvolutionChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" strokeOpacity={0.4} />
                 <XAxis dataKey="dia" stroke="#757682" fontSize={11} />
                 <YAxis stroke="#757682" fontSize={11} />
                 <Tooltip
@@ -523,46 +549,50 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     name,
                   ]}
                   contentStyle={{
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'rgb(var(--color-surface-container-lowest))',
                     borderRadius: '8px',
-                    borderColor: '#cbd5e1',
+                    borderColor: 'rgb(var(--color-outline-variant))',
+                    color: 'rgb(var(--color-on-surface))',
                     fontSize: '12px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                   }}
+                  itemStyle={{ color: 'rgb(var(--color-on-surface))' }}
+                  labelStyle={{ color: 'rgb(var(--color-on-surface))', fontWeight: 'bold' }}
                 />
-                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
                 <Line
                   type="monotone"
                   dataKey="apoios"
                   name="Apoio ao Tratamento"
-                  stroke="#00236f"
+                  stroke="#2563eb"
                   strokeWidth={3}
-                  dot={{ r: 3, fill: '#00236f' }}
-                  activeDot={{ r: 6 }}
+                  dot={{ r: 3.5, fill: '#2563eb', strokeWidth: 1, stroke: '#ffffff' }}
+                  activeDot={{ r: 6, fill: '#2563eb' }}
                 />
                 <Line
                   type="monotone"
                   dataKey="rotinas"
                   name="Na Rotina"
-                  stroke="#006398"
+                  stroke="#9333ea"
                   strokeWidth={2.5}
-                  dot={{ r: 3, fill: '#006398' }}
-                  activeDot={{ r: 5 }}
+                  dot={{ r: 3.5, fill: '#9333ea', strokeWidth: 1, stroke: '#ffffff' }}
+                  activeDot={{ r: 6, fill: '#9333ea' }}
                 />
                 <Line
                   type="monotone"
                   dataKey="totalGeral"
                   name="Total Geral (Apoio + Rotina)"
                   stroke="#059669"
-                  strokeWidth={2}
+                  strokeWidth={2.5}
                   strokeDasharray="4 2"
-                  dot={{ r: 2.5, fill: '#059669' }}
-                  activeDot={{ r: 5 }}
+                  dot={{ r: 3, fill: '#059669', strokeWidth: 1, stroke: '#ffffff' }}
+                  activeDot={{ r: 6, fill: '#059669' }}
                 />
                 <Line
                   type="monotone"
                   dataKey="meta"
                   name="Meta Diária Fixa (Apoio)"
-                  stroke="#d97706"
+                  stroke="#ea580c"
                   strokeDasharray="5 5"
                   strokeWidth={2}
                   dot={false}
@@ -594,11 +624,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                     name === 'mes' ? 'Total no Mês' : 'Hoje',
                   ]}
                   contentStyle={{
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'rgb(var(--color-surface-container-lowest))',
                     borderRadius: '8px',
-                    borderColor: '#cbd5e1',
+                    borderColor: 'rgb(var(--color-outline-variant))',
+                    color: 'rgb(var(--color-on-surface))',
                     fontSize: '12px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                   }}
+                  itemStyle={{ color: 'rgb(var(--color-on-surface))' }}
+                  labelStyle={{ color: 'rgb(var(--color-on-surface))', fontWeight: 'bold' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '12px' }} />
                 <Bar dataKey="mes" name="Total no Mês" fill="#006398" radius={[4, 4, 0, 0]} />

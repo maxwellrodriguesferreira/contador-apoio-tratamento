@@ -66,60 +66,60 @@
 
   html.dark,
   .dark {
-    /* Primary (Dark) */
-    --color-primary: 94 139 255;
+    /* Primary (Dark) - Azul vibrante com alta legibilidade */
+    --color-primary: 96 165 250;
     --color-primary-container: 30 58 138;
     --color-primary-fixed: 220 225 255;
-    --color-primary-fixed-dim: 182 196 255;
-    --color-primary-on-container: 220 225 255;
+    --color-primary-fixed-dim: 147 197 253;
+    --color-primary-on-container: 219 234 254;
 
-    /* Secondary (Dark) */
-    --color-secondary: 56 189 248;
-    --color-secondary-container: 3 105 161;
-    --color-secondary-fixed: 204 229 255;
-    --color-secondary-fixed-dim: 147 204 255;
-    --color-secondary-on-container: 224 242 254;
+    /* Secondary (Dark) - Púrpura/Violeta clínico para contraste nítido */
+    --color-secondary: 192 132 252;
+    --color-secondary-container: 88 28 135;
+    --color-secondary-fixed: 243 232 255;
+    --color-secondary-fixed-dim: 216 180 254;
+    --color-secondary-on-container: 250 245 255;
 
-    /* Tertiary (Dark) */
+    /* Tertiary (Dark) - Esmeralda tecnológico */
     --color-tertiary: 52 211 153;
     --color-tertiary-container: 6 95 70;
-    --color-tertiary-fixed: 133 248 196;
-    --color-tertiary-fixed-dim: 104 219 169;
-    --color-tertiary-on-container: 209 250 229;
+    --color-tertiary-fixed: 209 250 229;
+    --color-tertiary-fixed-dim: 110 231 183;
+    --color-tertiary-on-container: 236 253 245;
 
-    /* Surface & Background (Dark) */
-    --color-background: 10 15 29;
-    --color-surface: 15 23 42;
-    --color-surface-bright: 36 51 80;
-    --color-surface-dim: 10 15 29;
-    --color-surface-variant: 30 41 59;
-    --color-surface-container-lowest: 15 23 42;
-    --color-surface-container-low: 21 31 50;
-    --color-surface-container: 26 38 61;
-    --color-surface-container-high: 33 48 77;
-    --color-surface-container-highest: 41 59 93;
-    --color-surface-tint: 141 162 251;
+    /* Surface & Background (Dark) - Slate Profundo com relevo hierárquico nos cards */
+    --color-background: 11 15 25;
+    --color-surface: 17 24 39;
+    --color-surface-bright: 30 41 59;
+    --color-surface-dim: 11 15 25;
+    --color-surface-variant: 24 33 47;
+    --color-surface-container-lowest: 19 27 44;
+    --color-surface-container-low: 26 36 57;
+    --color-surface-container: 33 46 72;
+    --color-surface-container-high: 42 58 89;
+    --color-surface-container-highest: 53 72 109;
+    --color-surface-tint: 147 197 253;
 
-    /* Content (Dark) */
-    --color-on-surface: 241 245 249;
-    --color-on-surface-variant: 148 163 184;
-    --color-on-primary: 255 255 255;
+    /* Content (Dark) - Alto contraste sem ofuscamento */
+    --color-on-surface: 243 244 246;
+    --color-on-surface-variant: 156 163 175;
+    --color-on-primary: 15 23 42;
     --color-on-secondary: 15 23 42;
     --color-on-tertiary: 15 23 42;
-    --color-on-background: 241 245 249;
+    --color-on-background: 243 244 246;
 
-    /* Outline (Dark) */
-    --color-outline: 100 116 139;
-    --color-outline-variant: 46 59 82;
+    /* Outline (Dark) - Bordas suaves e elegantes */
+    --color-outline: 148 163 184;
+    --color-outline-variant: 51 65 85;
 
     /* States (Dark) */
     --color-error: 248 113 113;
     --color-error-container: 127 29 29;
     --color-error-on-container: 254 202 202;
 
-    --color-success: 16 185 129;
+    --color-success: 52 211 153;
     --color-success-light: 6 78 59;
-    --color-success-dark: 52 211 153;
+    --color-success-dark: 110 231 183;
 
     --color-warning: 251 191 36;
     --color-warning-light: 120 53 15;
