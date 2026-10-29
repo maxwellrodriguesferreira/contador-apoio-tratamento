@@ -51,10 +51,14 @@ Para que o GitHub Actions consiga enviar as imagens para a sua conta do Docker H
 1. Abra seu repositório no GitHub: `github.com/seu-usuario/contador-apoio-tratamento`.
 2. Vá na aba **Settings** (Configurações) ➔ No menu lateral, clique em **Secrets and variables** ➔ **Actions**.
 3. Clique no botão verde **New repository secret** e crie os dois seguintes:
-   * **Nome:** `DOCKERHUB_USERNAME`  
+   * **Nome:** `DOCKERHUB_USERNAME` *(Obrigatório)*  
      **Valor:** Seu usuário do Docker Hub (ex: `maxwellrodriguesferreira`).
-   * **Nome:** `DOCKERHUB_TOKEN`  
+   * **Nome:** `DOCKERHUB_TOKEN` *(Obrigatório)*  
      **Valor:** O token de acesso pessoal gerado no passo anterior.
+
+   > 💡 **Segredos Opcionais para Disparo Imediato via Webhook**:
+   > * **`WATCHTOWER_WEBHOOK_URL`** *(Opcional)*: URL do endpoint HTTP do Watchtower no seu servidor (ex: `https://watchtower.seuservidor.com.br/v1/update`). Se não configurado, o Watchtower atualizará normalmente através do polling periódico de 5 minutos.
+   > * **`WATCHTOWER_HTTP_API_TOKEN`** *(Opcional)*: Token Bearer caso a API HTTP do seu Watchtower esteja protegida por autenticação.
 
 ---
 

@@ -68,12 +68,19 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
+    env:
+      WATCHTOWER_WEBHOOK_URL: ${{ secrets.WATCHTOWER_WEBHOOK_URL }}
+      WATCHTOWER_HTTP_API_TOKEN: ${{ secrets.WATCHTOWER_HTTP_API_TOKEN }}
 
     steps:
       - name: Disparar Webhook do Watchtower
-        if: "${{ secrets.WATCHTOWER_WEBHOOK_URL != '' }}"
+        if: env.WATCHTOWER_WEBHOOK_URL != ''
         run: |
           echo "Disparando atualização imediata no Watchtower..."
-          curl -f -X POST "${{ secrets.WATCHTOWER_WEBHOOK_URL }}" \
-            ${{ secrets.WATCHTOWER_HTTP_API_TOKEN != '' && format('-H "Authorization: Bearer {0}"', secrets.WATCHTOWER_HTTP_API_TOKEN) || '' }} || true
+          if [ -n "$WATCHTOWER_HTTP_API_TOKEN" ]; then
+            curl -f -X POST "$WATCHTOWER_WEBHOOK_URL" \
+              -H "Authorization: Bearer $WATCHTOWER_HTTP_API_TOKEN" || true
+          else
+            curl -f -X POST "$WATCHTOWER_WEBHOOK_URL" || true
+          fi
           echo "Sinal enviado com sucesso!"
