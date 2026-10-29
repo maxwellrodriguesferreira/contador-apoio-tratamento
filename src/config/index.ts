@@ -12,6 +12,7 @@ export const APP_CONFIG = {
     userProfiles: 'apoio_tratamento_user_profiles',
     attendants: 'apoio_tratamento_attendants',
     supports: 'apoio_tratamento_supports',
+    routines: 'apoio_tratamento_routines',
     supportAudits: 'apoio_tratamento_support_audits',
     auditLogs: 'apoio_tratamento_audit_logs',
     goals: 'apoio_tratamento_goals',

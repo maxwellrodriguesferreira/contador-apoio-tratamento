@@ -66,7 +66,6 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
     setIsSubmitting(true);
 
     try {
-      // Simula pequeno delay de persistência segura com idempotência
       await new Promise((r) => setTimeout(r, 450));
 
       const selectedAttendant = activeAttendants.find((a) => a.id === attendantId);
@@ -78,13 +77,13 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
         observation: observation.trim() || undefined,
       });
 
-      showToast('✓ Apoio registrado com sucesso.', 'success', 'Lançamento Concluído');
+      showToast('✓ Apoio ao Tratamento registrado com sucesso.', 'success', 'Lançamento Concluído');
 
       setLastSavedInfo(
         `Último registro: ${quantity} apoio(s) para ${selectedAttendant?.name} na data ${date}.`
       );
 
-      // Regra 22: Limpar somente quantidade (volta para 1) e observação; MANTER data e atendente
+      // Limpar somente quantidade (volta para 1) e observação; MANTER data e atendente
       setQuantity(1);
       setObservation('');
     } catch (err: unknown) {
@@ -114,9 +113,12 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
       {/* Cabeçalho da Página */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-on-surface tracking-tight">Registrar Apoio</h1>
+          <h1 className="text-2xl font-bold text-on-surface tracking-tight flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[28px] text-primary">health_and_safety</span>
+            Registrar Apoio ao Tratamento
+          </h1>
           <p className="text-xs text-on-surface-variant mt-1">
-            Lançamento de Apoios ao Tratamento vinculados aos atendentes farmacêuticos
+            Lançamento de Apoios ao Tratamento farmacêutico vinculados a metas diárias e mensais
           </p>
         </div>
         <Button
@@ -234,12 +236,12 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
               rows={3}
               value={observation}
               onChange={(e) => setObservation(e.target.value)}
-              placeholder="Ex.: Cliente orientado sobre antibioticoterapia e aceitou acompanhamento do farmacêutico..."
+              placeholder="Ex.: Cliente orientado sobre adesão e posologia farmacêutica..."
               className="w-full p-3 rounded-lg bg-surface-container-lowest border border-outline-variant/50 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary resize-none"
             />
           </div>
 
-          {/* Botão de Submissão com prevenção contra duplo clique */}
+          {/* Botão de Submissão */}
           <div className="pt-3">
             <Button
               type="submit"
@@ -248,9 +250,9 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
               className="w-full"
               isLoading={isSubmitting}
               loadingText="Salvando..."
-              icon="add_task"
+              icon="health_and_safety"
             >
-              Registrar Apoio
+              Registrar Apoio ao Tratamento
             </Button>
           </div>
         </form>

@@ -38,6 +38,22 @@ export interface TreatmentSupport {
   version: number;
 }
 
+export interface RoutineCare {
+  id: string;
+  date: string; // Formato YYYY-MM-DD
+  attendantId: string;
+  quantity: number;
+  observation?: string;
+  createdBy: string;
+  updatedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string | null;
+  deletedBy?: string | null;
+  version: number;
+}
+
+
 export type SupportAuditAction = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
 
 export interface TreatmentSupportAudit {
@@ -169,3 +185,45 @@ export interface AttendantPerformance {
   active: boolean;
   percentageOfMonth: number;
 }
+
+export interface ConsolidatedServicesMetrics {
+  // Diário
+  todayTreatmentSupport: number;
+  todayRoutineCare: number;
+  todayTotalServices: number; // Soma exata dos dois indicadores
+
+  // Mensal
+  monthTreatmentSupport: number;
+  monthRoutineCare: number;
+  monthTotalServices: number; // Soma exata dos dois indicadores
+
+  // Referência
+  referenceDate: string;
+  referenceMonth: string;
+}
+
+export type RankingSortMode = 'TOTAL' | 'SUPPORT' | 'ROUTINE';
+
+export interface ConsolidatedAttendantPerformance {
+  position?: number;
+  attendantId: string;
+  attendantName: string;
+  attendantCode: string;
+  active: boolean;
+
+  // Apoio ao Tratamento
+  treatmentSupportToday: number;
+  treatmentSupportMonth: number;
+
+  // Na Rotina
+  routineCareToday: number;
+  routineCareMonth: number;
+
+  // Total Geral de Serviços (Soma obrigatória)
+  totalServicesToday: number;
+  totalServicesMonth: number;
+
+  // Percentual de participação no total consolidado do mês
+  percentageOfMonth: number;
+}
+

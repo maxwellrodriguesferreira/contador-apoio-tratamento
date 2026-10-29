@@ -2,6 +2,7 @@ import {
   UserProfile,
   Attendant,
   TreatmentSupport,
+  RoutineCare,
   TreatmentSupportAudit,
   AuditLog,
   Goal,
@@ -95,6 +96,16 @@ export class LocalDatabase {
   static saveSupports(supports: TreatmentSupport[]): void {
     this.set(APP_CONFIG.storageKeys.supports, supports);
   }
+
+  // Routine Cares / Na Rotina (Zerado para produção)
+  static getRoutines(): RoutineCare[] {
+    return this.get<RoutineCare[]>(APP_CONFIG.storageKeys.routines, []);
+  }
+
+  static saveRoutines(routines: RoutineCare[]): void {
+    this.set(APP_CONFIG.storageKeys.routines, routines);
+  }
+
 
   // Support Audits (Zerado para produção)
   static getSupportAudits(): TreatmentSupportAudit[] {

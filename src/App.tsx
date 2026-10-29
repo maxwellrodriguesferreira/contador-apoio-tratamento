@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/common/ProtectedRoute';
 import { LoginPage } from './pages/Login/LoginPage';
 import { DashboardPage } from './pages/Dashboard/DashboardPage';
 import { RegistrarApoioPage } from './pages/RegistrarApoio/RegistrarApoioPage';
+import { RegistrarRotinaPage } from './pages/RegistrarRotina/RegistrarRotinaPage';
 import { LancamentosPage } from './pages/Lancamentos/LancamentosPage';
 import { AtendentesPage } from './pages/Atendentes/AtendentesPage';
 import { MetasPage } from './pages/Metas/MetasPage';
@@ -52,6 +53,7 @@ export const App: React.FC = () => {
   // Se for ATENDENTE tentando acessar rota administrativa, redireciona suavemente para o Dashboard
   const adminOnlyRoutes = [
     'registrar-apoio',
+    'registrar-rotina',
     'lancamentos',
     'atendentes',
     'metas',
@@ -77,6 +79,11 @@ export const App: React.FC = () => {
       {currentPath === 'registrar-apoio' && (
         <ProtectedRoute allowedRoles={['ADMIN']}>
           <RegistrarApoioPage onNavigate={handleNavigate} />
+        </ProtectedRoute>
+      )}
+      {currentPath === 'registrar-rotina' && (
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <RegistrarRotinaPage onNavigate={handleNavigate} />
         </ProtectedRoute>
       )}
       {currentPath === 'lancamentos' && (

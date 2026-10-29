@@ -1,6 +1,6 @@
 import { apiRequest } from './cloudflareClient';
 import { LocalDatabase } from '../storage/localDatabase';
-import { Attendant, Goal, TreatmentSupport, TreatmentSupportAudit, UserProfile, AuditLog, AISettings, AppSettings } from '../../types';
+import { Attendant, Goal, TreatmentSupport, RoutineCare, TreatmentSupportAudit, UserProfile, AuditLog, AISettings, AppSettings } from '../../types';
 
 type DataChangeListener = () => void;
 
@@ -62,6 +62,17 @@ export class CloudSyncService {
       } catch (e) {
         console.warn('Aviso ao sincronizar apoios do Cloudflare D1:', e);
       }
+
+      // 2.1 Sincronizar Na Rotina
+      try {
+        const cloudRoutines = await apiRequest<RoutineCare[]>('/routines?includeDeleted=true');
+        if (Array.isArray(cloudRoutines)) {
+          LocalDatabase.saveRoutines(cloudRoutines);
+        }
+      } catch (e) {
+        console.warn('Aviso ao sincronizar Na Rotina do Cloudflare D1:', e);
+      }
+
 
       // 3. Sincronizar Metas
       try {
@@ -170,6 +181,24 @@ export class CloudSyncService {
       throw e;
     }
   }
+
+  static async syncRoutine(routine: RoutineCare): Promise<void> {
+    try {
+      if (routine.deletedAt) {
+        await apiRequest<RoutineCare>(`/routines/${routine.id}`, 'PUT', routine).catch(async () => {
+          await apiRequest<RoutineCare>('/routines', 'POST', routine);
+        });
+      } else {
+        await apiRequest<RoutineCare>('/routines', 'POST', routine).catch(async () => {
+          await apiRequest<RoutineCare>(`/routines/${routine.id}`, 'PUT', routine);
+        });
+      }
+    } catch (e) {
+      console.warn('Erro ao sincronizar atendimento Na Rotina no Cloudflare D1:', e);
+      throw e;
+    }
+  }
+
 
   static async syncGoal(goal: Goal): Promise<void> {
     try {
