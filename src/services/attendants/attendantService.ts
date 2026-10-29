@@ -17,7 +17,7 @@ export class AttendantService {
     return LocalDatabase.getAttendants().find((a) => a.id === id);
   }
 
-  static async create(currentUser: UserProfile, data: { name: string; code: string; active?: boolean }): Promise<Attendant> {
+  static create(currentUser: UserProfile, data: { name: string; code: string; active?: boolean }): Attendant {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem cadastrar atendentes.');
     }
@@ -43,7 +43,7 @@ export class AttendantService {
 
     attendants.push(newAttendant);
     LocalDatabase.saveAttendants(attendants);
-    await CloudSyncService.syncAttendant(newAttendant);
+    CloudSyncService.syncAttendant(newAttendant);
 
     AuditService.logSystemAction(
       currentUser.id,
@@ -58,11 +58,11 @@ export class AttendantService {
     return newAttendant;
   }
 
-  static async update(
+  static update(
     currentUser: UserProfile,
     id: string,
     data: { name: string; code: string; active: boolean }
-  ): Promise<Attendant> {
+  ): Attendant {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem editar atendentes.');
     }
@@ -88,7 +88,7 @@ export class AttendantService {
     attendant.updatedAt = new Date().toISOString();
 
     LocalDatabase.saveAttendants(attendants);
-    await CloudSyncService.syncAttendant(attendant);
+    CloudSyncService.syncAttendant(attendant);
 
     AuditService.logSystemAction(
       currentUser.id,
@@ -103,7 +103,7 @@ export class AttendantService {
     return attendant;
   }
 
-  static async toggleStatus(currentUser: UserProfile, id: string): Promise<Attendant> {
+  static toggleStatus(currentUser: UserProfile, id: string): Attendant {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem alterar o status de atendentes.');
     }
@@ -118,7 +118,7 @@ export class AttendantService {
     attendant.active = !attendant.active;
     attendant.updatedAt = new Date().toISOString();
     LocalDatabase.saveAttendants(attendants);
-    await CloudSyncService.syncAttendant(attendant);
+    CloudSyncService.syncAttendant(attendant);
 
     AuditService.logSystemAction(
       currentUser.id,
@@ -136,7 +136,7 @@ export class AttendantService {
   /**
    * Exclusão de atendente com auditoria
    */
-  static async delete(currentUser: UserProfile, id: string): Promise<void> {
+  static delete(currentUser: UserProfile, id: string): void {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem excluir atendentes.');
     }
@@ -151,7 +151,7 @@ export class AttendantService {
     const removed = attendants[index];
     attendants.splice(index, 1);
     LocalDatabase.saveAttendants(attendants);
-    await CloudSyncService.deleteAttendant(removed.id);
+    CloudSyncService.deleteAttendant(removed.id);
 
     AuditService.logSystemAction(
       currentUser.id,

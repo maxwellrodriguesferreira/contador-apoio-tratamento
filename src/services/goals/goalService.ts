@@ -86,4 +86,30 @@ export class GoalService {
 
     return newGoal;
   }
+
+  static async deleteGoal(currentUser: UserProfile, id: string): Promise<void> {
+    if (currentUser.role !== 'ADMIN') {
+      throw new Error('Acesso negado: Somente administradores podem excluir metas.');
+    }
+
+    const goals = LocalDatabase.getGoals();
+    const index = goals.findIndex((g) => g.id === id);
+    if (index === -1) {
+      throw new Error('Meta não encontrada.');
+    }
+
+    const [removed] = goals.splice(index, 1);
+    LocalDatabase.saveGoals(goals);
+    await CloudSyncService.deleteGoal(removed.id);
+
+    AuditService.logSystemAction(
+      currentUser.id,
+      currentUser.name,
+      currentUser.role,
+      'GOAL_UPDATED',
+      'GOAL',
+      removed.id,
+      { deletedGoalType: removed.type }
+    );
+  }
 }

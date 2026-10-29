@@ -71,7 +71,7 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
 
       const selectedAttendant = activeAttendants.find((a) => a.id === attendantId);
 
-      SupportService.create(user, {
+      await SupportService.create(user, {
         date,
         attendantId,
         quantity,

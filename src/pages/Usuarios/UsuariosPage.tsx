@@ -174,7 +174,7 @@ export const UsuariosPage: React.FC = () => {
 
     setIsResettingPassword(true);
     try {
-      const res = AuthService.resetUserPassword(
+      const res = await AuthService.resetUserPassword(
         currentUser,
         resetUser.id,
         resetMode === 'manual' ? { newPassword } : undefined

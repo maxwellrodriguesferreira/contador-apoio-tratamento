@@ -191,10 +191,11 @@ export class CloudSyncService {
     }
   }
 
-  static async syncUser(user: UserProfile): Promise<void> {
+  static async syncUser(user: UserProfile, password?: string): Promise<void> {
+    const payload = password ? { ...user, password } : user;
     try {
-      await apiRequest<UserProfile>('/users', 'POST', user).catch(async () => {
-        await apiRequest<UserProfile>(`/users/${user.id}`, 'PUT', user);
+      await apiRequest<UserProfile>('/users', 'POST', payload).catch(async () => {
+        await apiRequest<UserProfile>(`/users/${user.id}`, 'PUT', payload);
       });
     } catch (e) {
       console.warn('Erro ao sincronizar usuário no Cloudflare D1:', e);

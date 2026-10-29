@@ -360,11 +360,11 @@ export class AuthService {
     return user;
   }
 
-  static resetUserPassword(
+  static async resetUserPassword(
     currentUser: UserProfile,
     userId: string,
     options?: { newPassword?: string }
-  ): { success: boolean; message: string; temporaryPassword?: string } {
+  ): Promise<{ success: boolean; message: string; temporaryPassword?: string }> {
     if (currentUser.role !== 'ADMIN') {
       throw new Error('Acesso negado: Somente administradores podem redefinir senhas.');
     }
@@ -378,7 +378,7 @@ export class AuthService {
     const temporaryPassword = options?.newPassword || 'SenhaForte@2026';
     targetUser.updatedAt = new Date().toISOString();
     LocalDatabase.saveUserProfiles(users);
-    CloudSyncService.syncUser(targetUser);
+    await CloudSyncService.syncUser(targetUser, temporaryPassword);
 
     AuditService.logSystemAction(
       currentUser.id,
@@ -397,7 +397,7 @@ export class AuthService {
     };
   }
 
-  static changePassword(currentUser: UserProfile, _newPassword: string): void {
+  static async changePassword(currentUser: UserProfile, _newPassword: string): Promise<void> {
     const now = new Date().toISOString();
     currentUser.updatedAt = now;
     this.setCurrentUser(currentUser);
@@ -407,7 +407,7 @@ export class AuthService {
     if (user) {
       user.updatedAt = now;
       LocalDatabase.saveUserProfiles(users);
-      CloudSyncService.syncUser(user);
+      await CloudSyncService.syncUser(user, _newPassword);
     }
 
     AuditService.logSystemAction(

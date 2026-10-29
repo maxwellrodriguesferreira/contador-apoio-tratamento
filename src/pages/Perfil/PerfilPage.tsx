@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { AuthService } from '../../services/auth/authService';
 import { formatDateTimeBR } from '../../utils/calculations';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
@@ -17,6 +18,7 @@ export const PerfilPage: React.FC = () => {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     if (newPassword.length < 8) {
       showToast('A nova senha deve ter no mínimo 8 caracteres.', 'warning');
       return;
@@ -29,10 +31,8 @@ export const PerfilPage: React.FC = () => {
 
     setIsChangingPassword(true);
     try {
-      // Simulação da chamada ChangePassword do Amazon Cognito
-      await new Promise((r) => setTimeout(r, 600));
-
-      showToast('Senha alterada com sucesso no Amazon Cognito.', 'success', 'Segurança Atualizada');
+      await AuthService.changePassword(user, newPassword);
+      showToast('Senha alterada com sucesso no Cloudflare D1.', 'success', 'Segurança Atualizada');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');

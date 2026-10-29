@@ -125,7 +125,7 @@ export const LancamentosPage: React.FC = () => {
     if (!user || !editingSupport) return;
     setIsSavingEdit(true);
     try {
-      SupportService.update(user, editingSupport.id, {
+      await SupportService.update(user, editingSupport.id, {
         date: editDate,
         attendantId: editAttendantId,
         quantity: editQuantity,
@@ -149,7 +149,7 @@ export const LancamentosPage: React.FC = () => {
     if (!user || !deletingSupport) return;
     setIsDeleting(true);
     try {
-      SupportService.delete(user, deletingSupport.id);
+      await SupportService.delete(user, deletingSupport.id);
       showToast('✓ Apoio excluído com sucesso.', 'info', 'Soft Delete Realizado');
       setDeletingSupport(null);
       loadData();
@@ -166,7 +166,7 @@ export const LancamentosPage: React.FC = () => {
     if (!user || !restoringSupport) return;
     setIsRestoring(true);
     try {
-      SupportService.restore(user, restoringSupport.id);
+      await SupportService.restore(user, restoringSupport.id);
       showToast('✓ Apoio restaurado com sucesso.', 'success', 'Registro Reabilitado');
       setRestoringSupport(null);
       loadData();
