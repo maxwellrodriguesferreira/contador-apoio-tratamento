@@ -289,6 +289,12 @@ docker compose down -v
 
 ---
 
-## 9. Licença e Direitos
+## 9. Autoria, Responsabilidade Técnica e Licença
+
+A aplicação foi desenvolvida pelo Desenvolvedor de Software e Farmacêutico:
+* **Autor / Responsável Técnico**: **Maxwell Rodrigues Ferreira**
+* **Registro Profissional**: **CRF-SP: 86426**
+
+Unindo engenharia de software contemporânea, resiliência arquitetural e sólida vivência em assistência farmacêutica clínica e varejo farmacêutico.
 
 Projeto desenvolvido com padrões corporativos de arquitetura de software para Drogarias e Clínicas Farmacêuticas. Todos os direitos reservados.

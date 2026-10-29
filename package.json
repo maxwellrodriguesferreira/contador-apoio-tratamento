@@ -2,6 +2,7 @@
   "name": "contador-apoio-tratamento",
   "private": true,
   "version": "1.0.0",
+  "author": "Maxwell Rodrigues Ferreira - Desenvolvedor de Software e Farmacêutico (CRF-SP: 86426)",
   "type": "module",
   "scripts": {
     "dev": "vite",

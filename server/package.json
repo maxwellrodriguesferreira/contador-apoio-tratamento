@@ -1,6 +1,7 @@
 {
   "name": "contador-apoio-tratamento-backend",
   "version": "1.0.0",
+  "author": "Maxwell Rodrigues Ferreira - Desenvolvedor de Software e Farmacêutico (CRF-SP: 86426)",
   "type": "module",
   "description": "Backend API com Cloudflare D1 e Google Gemini para o sistema Apoio ao Tratamento",
   "main": "dist/index.js",

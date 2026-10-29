@@ -242,7 +242,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
         {/* Rodapé com Botão Sobre */}
         <div className="mt-6 pt-4 border-t border-outline-variant/30 flex items-center justify-between text-xs text-on-surface-variant">
-          <span className="font-medium text-[11px] text-outline">v1.0 • Produção</span>
+          <div className="flex flex-col">
+            <span className="font-medium text-[11px] text-outline">v1.0 • Produção</span>
+            <span className="text-[10px] text-on-surface-variant/80 font-medium">CRF-SP: 86426</span>
+          </div>
           <button
             type="button"
             onClick={() => setShowAboutModal(true)}
@@ -253,6 +256,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </button>
         </div>
       </div>
+
+      {/* Rodapé da Página de Login com Autoria */}
+      <footer className="mt-6 text-center text-xs text-on-surface-variant z-10 animate-in fade-in max-w-md px-4">
+        <p className="text-[11px] text-outline">
+          Aplicação desenvolvida pelo Desenvolvedor de Software e Farmacêutico:
+        </p>
+        <p className="text-xs font-semibold text-on-surface mt-0.5">
+          Maxwell Rodrigues Ferreira <span className="text-primary font-bold">(CRF-SP: 86426)</span>
+        </p>
+      </footer>
 
       {/* Modal Esqueci Minha Senha */}
       {showForgotPasswordModal && (
@@ -440,6 +453,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                   do seu desempenho e registro rápido de apoios.
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Autoria e Responsabilidade Técnica */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 via-surface-container-low to-surface-container-low border border-primary/25 flex items-start gap-3.5 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-sm">
+              <span className="material-symbols-outlined text-[22px]">medical_services</span>
+            </div>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h5 className="font-bold text-xs text-on-surface">Desenvolvimento &amp; Responsabilidade Técnica</h5>
+                <span className="text-[10px] bg-primary/15 text-primary font-bold px-2 py-0.5 rounded-full">
+                  CRF-SP: 86426
+                </span>
+              </div>
+              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
+                Aplicação desenvolvida pelo Desenvolvedor de Software e Farmacêutico:{' '}
+                <strong className="text-on-surface font-semibold">Maxwell Rodrigues Ferreira</strong>. Concebida com engenharia de software de ponta e profundo alinhamento à rotina clínica e operacional farmacêutica.
+              </p>
             </div>
           </div>
 

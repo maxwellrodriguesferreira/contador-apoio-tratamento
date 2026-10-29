@@ -154,6 +154,41 @@ export const PerfilPage: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {/* Informações da Aplicação e Responsabilidade Técnica */}
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-subtle p-6 sm:p-8 flex flex-col gap-4">
+        <div className="flex items-center gap-3 border-b border-outline-variant/20 pb-4">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+            <span className="material-symbols-outlined text-[20px]">verified</span>
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-on-surface">Sobre a Plataforma</h3>
+            <p className="text-xs text-on-surface-variant">
+              Autoria, desenvolvimento e responsabilidade técnica
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-surface-container-low text-xs">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center font-bold text-base shadow-sm shrink-0">
+              <span className="material-symbols-outlined text-[22px]">medical_services</span>
+            </div>
+            <div>
+              <span className="text-[11px] text-outline block font-medium">Desenvolvido por:</span>
+              <span className="text-sm font-bold text-on-surface block">Maxwell Rodrigues Ferreira</span>
+              <span className="text-xs text-primary font-medium">
+                Desenvolvedor de Software e Farmacêutico
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="px-3 py-1 rounded-full bg-primary/15 text-primary font-bold text-xs border border-primary/25">
+              CRF-SP: 86426
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

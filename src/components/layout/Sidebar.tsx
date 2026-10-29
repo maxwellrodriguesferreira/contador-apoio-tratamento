@@ -141,6 +141,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="material-symbols-outlined text-[20px]">logout</span>
             </button>
           </div>
+
+          {/* Autoria e Responsabilidade Técnica */}
+          <div className="px-4 py-2.5 bg-surface-container-lowest/80 border-t border-outline-variant/20 flex flex-col gap-0.5">
+            <span className="text-[10px] text-outline font-medium">Desenvolvido por:</span>
+            <span className="text-[11px] font-semibold text-on-surface truncate">
+              Maxwell Rodrigues Ferreira
+            </span>
+            <span className="text-[10px] text-primary font-medium">
+              Dev &amp; Farmacêutico • CRF-SP: 86426
+            </span>
+          </div>
         </div>
       </aside>
     </>
