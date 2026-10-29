@@ -1,6 +1,16 @@
 import { format, getDaysInMonth, parseISO, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Attendant, Goal, TreatmentSupport, DashboardMetrics, AttendantPerformance } from '../types';
+import {
+  Attendant,
+  Goal,
+  TreatmentSupport,
+  RoutineCare,
+  DashboardMetrics,
+  AttendantPerformance,
+  ConsolidatedServicesMetrics,
+  ConsolidatedAttendantPerformance,
+  RankingSortMode,
+} from '../types';
 
 /**
  * Formata data ISO (YYYY-MM-DD) para padrão brasileiro DD/MM/YYYY
@@ -218,3 +228,206 @@ export function generateDataHash(data: unknown): string {
   }
   return Math.abs(hash).toString(36);
 }
+
+/**
+ * Deduplica registros por ID para garantir que nenhum registro seja contado 2 vezes
+ * e filtra registros com exclusão lógica (deletedAt).
+ */
+export function filterValidRecords<T extends { id: string; deletedAt?: string | null }>(records: T[]): T[] {
+  const seenIds = new Set<string>();
+  const valid: T[] = [];
+  for (const r of records) {
+    if (!r.deletedAt && !seenIds.has(r.id)) {
+      seenIds.add(r.id);
+      valid.push(r);
+    }
+  }
+  return valid;
+}
+
+/**
+ * Calcula os indicadores individuais e consolidados de serviços:
+ * 1. Total de Apoio ao Tratamento
+ * 2. Total de Na Rotina
+ * 3. Total Geral de Serviços = Apoio ao Tratamento + Na Rotina
+ * Mantém o mesmo período de referência (targetDate e mês correspondente)
+ */
+export function calculateConsolidatedMetrics(
+  supports: TreatmentSupport[],
+  routines: RoutineCare[],
+  targetDate: string = getTodayISODate()
+): ConsolidatedServicesMetrics {
+  const validSupports = filterValidRecords(supports);
+  const validRoutines = filterValidRecords(routines);
+  const targetMonth = targetDate.substring(0, 7); // YYYY-MM
+
+  // Diário
+  const todayTreatmentSupport = validSupports
+    .filter((s) => s.date === targetDate)
+    .reduce((acc, curr) => acc + curr.quantity, 0);
+
+  const todayRoutineCare = validRoutines
+    .filter((r) => r.date === targetDate)
+    .reduce((acc, curr) => acc + curr.quantity, 0);
+
+  const todayTotalServices = todayTreatmentSupport + todayRoutineCare;
+
+  // Mensal
+  const monthTreatmentSupport = validSupports
+    .filter((s) => s.date.startsWith(targetMonth))
+    .reduce((acc, curr) => acc + curr.quantity, 0);
+
+  const monthRoutineCare = validRoutines
+    .filter((r) => r.date.startsWith(targetMonth))
+    .reduce((acc, curr) => acc + curr.quantity, 0);
+
+  const monthTotalServices = monthTreatmentSupport + monthRoutineCare;
+
+  return {
+    todayTreatmentSupport,
+    todayRoutineCare,
+    todayTotalServices,
+    monthTreatmentSupport,
+    monthRoutineCare,
+    monthTotalServices,
+    referenceDate: targetDate,
+    referenceMonth: targetMonth,
+  };
+}
+
+/**
+ * Totais consolidados da equipe
+ */
+export interface TeamServicesTotal {
+  treatmentSupportToday: number;
+  treatmentSupportMonth: number;
+  routineCareToday: number;
+  routineCareMonth: number;
+  totalServicesToday: number;
+  totalServicesMonth: number;
+}
+
+export function calculateTeamServicesTotal(
+  performances: ConsolidatedAttendantPerformance[]
+): TeamServicesTotal {
+  return performances.reduce(
+    (acc, curr) => ({
+      treatmentSupportToday: acc.treatmentSupportToday + curr.treatmentSupportToday,
+      treatmentSupportMonth: acc.treatmentSupportMonth + curr.treatmentSupportMonth,
+      routineCareToday: acc.routineCareToday + curr.routineCareToday,
+      routineCareMonth: acc.routineCareMonth + curr.routineCareMonth,
+      totalServicesToday: acc.totalServicesToday + curr.totalServicesToday,
+      totalServicesMonth: acc.totalServicesMonth + curr.totalServicesMonth,
+    }),
+    {
+      treatmentSupportToday: 0,
+      treatmentSupportMonth: 0,
+      routineCareToday: 0,
+      routineCareMonth: 0,
+      totalServicesToday: 0,
+      totalServicesMonth: 0,
+    }
+  );
+}
+
+/**
+ * Calcula o desempenho individual e consolidado de cada atendente e da equipe:
+ * - Apoio ao Tratamento (Hoje / Mês)
+ * - Na Rotina (Hoje / Mês)
+ * - Total Geral de Serviços (Hoje / Mês) = Apoio + Na Rotina
+ * - Permite ordenar por:
+ *   - 'TOTAL': Total Geral decrescente (padrão)
+ *   - 'SUPPORT': Apoio ao Tratamento decrescente
+ *   - 'ROUTINE': Na Rotina decrescente
+ * - Atribui posições (1º, 2º, 3º...)
+ */
+export function calculateConsolidatedAttendantsPerformance(
+  supports: TreatmentSupport[],
+  routines: RoutineCare[],
+  attendants: Attendant[],
+  targetDate: string = getTodayISODate(),
+  sortBy: RankingSortMode = 'TOTAL'
+): ConsolidatedAttendantPerformance[] {
+  const validSupports = filterValidRecords(supports);
+  const validRoutines = filterValidRecords(routines);
+  const targetMonth = targetDate.substring(0, 7);
+
+  // Calcula totais da equipe no mês para cálculo de participação relativa
+  const teamMonthSupports = validSupports
+    .filter((s) => s.date.startsWith(targetMonth))
+    .reduce((acc, curr) => acc + curr.quantity, 0);
+
+  const teamMonthRoutines = validRoutines
+    .filter((r) => r.date.startsWith(targetMonth))
+    .reduce((acc, curr) => acc + curr.quantity, 0);
+
+  const teamMonthTotal = teamMonthSupports + teamMonthRoutines;
+
+  const list: ConsolidatedAttendantPerformance[] = attendants.map((attendant) => {
+    // Apoio ao Tratamento Individual
+    const supToday = validSupports
+      .filter((s) => s.attendantId === attendant.id && s.date === targetDate)
+      .reduce((acc, curr) => acc + curr.quantity, 0);
+
+    const supMonth = validSupports
+      .filter((s) => s.attendantId === attendant.id && s.date.startsWith(targetMonth))
+      .reduce((acc, curr) => acc + curr.quantity, 0);
+
+    // Na Rotina Individual
+    const rotToday = validRoutines
+      .filter((r) => r.attendantId === attendant.id && r.date === targetDate)
+      .reduce((acc, curr) => acc + curr.quantity, 0);
+
+    const rotMonth = validRoutines
+      .filter((r) => r.attendantId === attendant.id && r.date.startsWith(targetMonth))
+      .reduce((acc, curr) => acc + curr.quantity, 0);
+
+    // Total Geral Individual: Apoio + Na Rotina
+    const totalToday = supToday + rotToday;
+    const totalMonth = supMonth + rotMonth;
+
+    const percentageOfMonth = calculatePercentage(totalMonth, teamMonthTotal);
+
+    return {
+      attendantId: attendant.id,
+      attendantName: attendant.name,
+      attendantCode: attendant.code,
+      active: attendant.active,
+      treatmentSupportToday: supToday,
+      treatmentSupportMonth: supMonth,
+      routineCareToday: rotToday,
+      routineCareMonth: rotMonth,
+      totalServicesToday: totalToday,
+      totalServicesMonth: totalMonth,
+      percentageOfMonth,
+    };
+  });
+
+  // Ordenação de acordo com o modo selecionado
+  list.sort((a, b) => {
+    if (sortBy === 'SUPPORT') {
+      if (b.treatmentSupportMonth !== a.treatmentSupportMonth) {
+        return b.treatmentSupportMonth - a.treatmentSupportMonth;
+      }
+      return b.totalServicesMonth - a.totalServicesMonth;
+    }
+    if (sortBy === 'ROUTINE') {
+      if (b.routineCareMonth !== a.routineCareMonth) {
+        return b.routineCareMonth - a.routineCareMonth;
+      }
+      return b.totalServicesMonth - a.totalServicesMonth;
+    }
+    // Padrão: Total Geral decrescente
+    if (b.totalServicesMonth !== a.totalServicesMonth) {
+      return b.totalServicesMonth - a.totalServicesMonth;
+    }
+    return b.totalServicesToday - a.totalServicesToday;
+  });
+
+  // Atribui posições (1º, 2º, 3º...)
+  return list.map((item, index) => ({
+    ...item,
+    position: index + 1,
+  }));
+}
+

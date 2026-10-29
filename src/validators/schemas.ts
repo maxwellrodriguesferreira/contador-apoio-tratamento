@@ -10,6 +10,17 @@ export const supportSchema = z.object({
   observation: z.string().max(500, { message: 'A observação não pode exceder 500 caracteres.' }).optional(),
 });
 
+export const routineSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Data inválida. Use o formato AAAA-MM-DD.' }),
+  attendantId: z.string().min(1, { message: 'Selecione um atendente.' }),
+  quantity: z
+    .number({ invalid_type_error: 'A quantidade deve ser um número inteiro.' })
+    .int({ message: 'A quantidade não pode conter casas decimais.' })
+    .min(1, { message: 'A quantidade mínima permitida é 1.' }),
+  observation: z.string().max(500, { message: 'A observação não pode exceder 500 caracteres.' }).optional(),
+});
+
+
 export const attendantSchema = z.object({
   name: z.string().min(2, { message: 'O nome do atendente deve ter pelo menos 2 caracteres.' }).max(100),
   code: z.string().min(1, { message: 'O código identificador é obrigatório.' }).max(20),

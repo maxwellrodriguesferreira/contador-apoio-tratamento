@@ -101,9 +101,30 @@ CREATE TABLE IF NOT EXISTS system_settings (
   updated_at TEXT NOT NULL
 );
 
+-- 9. Na Rotina (Registros Clínicos de Rotina)
+CREATE TABLE IF NOT EXISTS routine_cares (
+  id TEXT PRIMARY KEY,
+  date TEXT NOT NULL,
+  attendant_id TEXT NOT NULL,
+  quantity INTEGER NOT NULL,
+  observation TEXT,
+  created_by TEXT NOT NULL,
+  updated_by TEXT,
+  deleted_at TEXT,
+  deleted_by TEXT,
+  version INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  FOREIGN KEY (attendant_id) REFERENCES attendants (id)
+);
+
 -- Índices de Otimização para Consultas
 CREATE INDEX IF NOT EXISTS idx_treatment_supports_date ON treatment_supports (date);
 CREATE INDEX IF NOT EXISTS idx_treatment_supports_attendant ON treatment_supports (attendant_id);
 CREATE INDEX IF NOT EXISTS idx_treatment_supports_deleted ON treatment_supports (deleted_at);
+CREATE INDEX IF NOT EXISTS idx_routine_cares_date ON routine_cares (date);
+CREATE INDEX IF NOT EXISTS idx_routine_cares_attendant ON routine_cares (attendant_id);
+CREATE INDEX IF NOT EXISTS idx_routine_cares_deleted ON routine_cares (deleted_at);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs (created_at);
 CREATE INDEX IF NOT EXISTS idx_ai_analyses_hash ON ai_analyses (input_hash);
+
