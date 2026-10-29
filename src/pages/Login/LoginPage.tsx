@@ -169,6 +169,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 required
                 icon="lock"
                 autoComplete="current-password"
+                showPasswordToggle
               />
               <div className="flex justify-end mt-1">
                 <button
@@ -200,6 +201,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 required
                 icon="lock"
                 autoComplete="new-password"
+                showPasswordToggle
               />
               <Input
                 label="Confirmar Nova Senha"
@@ -210,6 +212,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 required
                 icon="lock_reset"
                 autoComplete="new-password"
+                showPasswordToggle
               />
             </>
           )}
