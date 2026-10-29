@@ -161,6 +161,13 @@ export class RoutineService {
   }
 
   /**
+   * Alias para softDelete mantendo paridade com SupportService
+   */
+  static delete(currentUser: UserProfile, id: string): RoutineCare {
+    return this.softDelete(currentUser, id);
+  }
+
+  /**
    * Restauração de registro previamente excluído
    */
   static restore(currentUser: UserProfile, id: string): RoutineCare {
