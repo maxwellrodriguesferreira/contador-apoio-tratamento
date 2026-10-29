@@ -1,0 +1,44 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: contador-apoio-ingress
+  namespace: contador-apoio
+  labels:
+    app.kubernetes.io/name: contador-apoio
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: contador-apoio-tratamento
+  annotations:
+    # Traefik Ingress Controller nativo do K3s
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+
+    # Emissão e renovação automática de certificado SSL via Cert-Manager
+    cert-manager.io/issuer: letsencrypt-contador-apoio
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - maxwelldev.online
+        - www.maxwelldev.online
+      secretName: contador-apoio-tls
+  rules:
+    - host: maxwelldev.online
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: contador-apoio-service
+                port:
+                  name: http
+    - host: www.maxwelldev.online
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: contador-apoio-service
+                port:
+                  name: http

@@ -1,38 +1,42 @@
-# Manual Prático de Implementação Kubernetes (K3s) — Raspberry Pi (ARM64) & VPS Cloud (x86_64)
+# Manual Prático de Implementação Kubernetes (K3s) — Raspberry Pi 4 (ARM64) & VPS Cloud (x86_64)
 
-> **Guia passo a passo completo** para provisionamento, orquestração de contêineres, armazenamento persistente, roteamento de borda vs nuvem, segurança e governança do sistema **Apoio ao Tratamento** utilizando **K3s** (distribuição Kubernetes leve e certificada pela CNCF).
+> **Guia passo a passo definitivo** para provisionamento, orquestração de contêineres, armazenamento persistente, roteamento de borda vs nuvem, segurança e governança do sistema **Apoio ao Tratamento** utilizando **K3s** (distribuição Kubernetes leve e certificada pela CNCF).
 >
 > * **Imagem Oficial no Docker Hub**: [`maxwellrodriguesferreira/apoio-tratamento:latest`](https://hub.docker.com/r/maxwellrodriguesferreira/apoio-tratamento) (compilação simultânea multi-arch `linux/amd64` e `linux/arm64`).
-> * **Orquestrador**: **K3s** (consumo ultra-reduzido de ~500 MB de RAM, ideal para placas Raspberry Pi e VPS de entrada).
-> * **Persistência de Dados**: **Local Path Provisioner** nativo do K3s montado em `/app/data` para o motor SQLite local híbrido com Cloudflare D1.
-> * **Estratégias de Exposição**:
->   * 🍓 **Raspberry Pi (Borda / Farmácia)**: Utiliza **Cloudflare Tunnel (cloudflared)** rodando como Pod interno para contornar CGNAT sem abrir portas no roteador da farmácia.
->   * ☁️ **VPS Cloud (Nuvem / IP Público)**: Utiliza **Traefik Ingress Controller** nativo com **Cert-Manager** para emissão e renovação automática de certificados SSL/TLS da Let's Encrypt via DNS Direto (Registro A).
+> * **Domínio Pessoal Configurado**: `maxwelldev.online` (e `www.maxwelldev.online`).
+> * **E-mail de Notificação SSL Let's Encrypt**: `maxwellferreira@proton.me`.
+> * **Pré-requisito Vital de Portas**: **Desativação do Nginx Proxy Manager (NPM)** para liberar as portas `80` e `443` para o K3s Traefik Ingress.
+> * **Estratégias de Exposição por Ambiente**:
+>   * 🍓 **Raspberry Pi 4 (Borda / Farmácia)**: Utiliza **Cloudflare Tunnel (cloudflared)** rodando como Pod in-cluster para contornar CGNAT sem abrir portas no roteador da farmácia.
+>   * ☁️ **VPS Cloud (Nuvem / IP Público)**: Utiliza **Traefik Ingress Controller** nativo do K3s com **Cert-Manager** para emissão e renovação automática de certificados SSL/TLS da Let's Encrypt para `maxwelldev.online`.
 
 ---
 
 ## 📑 Sumário
 
 1. [Topologia e Arquitetura do Kubernetes](#1-topologia-e-arquitetura-do-kubernetes)
-2. [Requisitos de Hardware & Sistemas Homologados](#2-requisitos-de-hardware--sistemas-homologados)
-3. [Etapa 1: Preparação do Sistema Operacional](#3-etapa-1-preparação-do-sistema-operacional)
-   * [3.1. Ajustes Obrigatórios para Raspberry Pi (cgroups e ZRAM)](#31-ajustes-obrigatórios-para-raspberry-pi-cgroups-e-zram)
-   * [3.2. Ajustes para VPS Cloud (Firewall e Segurança)](#32-ajustes-para-vps-cloud-firewall-e-segurança)
-4. [Etapa 2: Instalação e Configuração do K3s](#4-etapa-2-instalação-e-configuração-do-k3s)
-   * [4.1. Instalação na VPS Cloud](#41-instalação-na-vps-cloud)
-   * [4.2. Instalação na Raspberry Pi](#42-instalação-na-raspberry-pi)
-   * [4.3. Configuração do Acesso via kubectl](#43-configuração-do-acesso-via-kubectl)
-5. [Etapa 3: Instalação do Cert-Manager (Exclusivo para VPS)](#5-etapa-3-instalação-do-cert-manager-exclusivo-para-vps)
-6. [Etapa 4: Configuração de Variáveis (ConfigMap) e Segredos (Secret)](#6-etapa-4-configuração-de-variáveis-configmap-e-segredos-secret)
-7. [Etapa 5: Roteamento de Rede e Exposição](#7-etapa-5-roteamento-de-rede-e-exposição)
-   * [5.1. Cenário Raspberry Pi: Cloudflare Tunnel in-Cluster (Bypass CGNAT)](#51-cenário-raspberry-pi-cloudflare-tunnel-in-cluster-bypass-cgnat)
-   * [5.2. Cenário VPS Cloud: Traefik Ingress + Let's Encrypt TLS](#52-cenário-vps-cloud-traefik-ingress--lets-encrypt-tls)
-8. [Etapa 6: Deploy da Aplicação no Cluster](#8-etapa-6-deploy-da-aplicação-no-cluster)
-9. [Etapa 7: Deploy Alternativo via Portainer Kubernetes](#9-etapa-7-deploy-alternativo-via-portainer-kubernetes)
-10. [Etapa 8: Ciclo de Atualização Contínua (CI/CD Rollout)](#10-etapa-8-ciclo-de-atualização-contínua-cicd-rollout)
-11. [Etapa 9: Rotinas de Backup, Monitoramento e Manutenção](#11-etapa-9-rotinas-de-backup-monitoramento-e-manutenção)
-12. [Etapa 10: Troubleshooting e Resolução de Problemas](#12-etapa-10-troubleshooting-e-resolução-de-problemas)
-13. [Quadro Comparativo: Raspberry Pi vs VPS](#13-quadro-comparativo-raspberry-pi-vs-vps)
+2. [Desativação do Nginx Proxy Manager (Liberação das Portas 80 e 443)](#2-desativação-do-nginx-proxy-manager-liberação-das-portas-80-e-443)
+3. [Requisitos de Hardware & Sistemas Homologados](#3-requisitos-de-hardware--sistemas-homologados)
+4. [Etapa 1: Preparação do Sistema Operacional](#4-etapa-1-preparação-do-sistema-operacional)
+   * [4.1. Ajustes Obrigatórios para Raspberry Pi 4 (cgroups e ZRAM)](#41-ajustes-obrigatórios-para-raspberry-pi-4-cgroups-e-zram)
+   * [4.2. Ajustes para VPS Cloud (Firewall e Portas)](#42-ajustes-para-vps-cloud-firewall-e-portas)
+5. [Etapa 2: Instalação e Configuração do K3s](#5-etapa-2-instalação-e-configuração-do-k3s)
+   * [5.1. Instalação na Raspberry Pi 4](#51-instalação-na-raspberry-pi-4)
+   * [5.2. Instalação na VPS Cloud](#52-instalação-na-vps-cloud)
+   * [5.3. Configuração de Acesso sem sudo (kubectl)](#53-configuração-de-acesso-sem-sudo-kubectl)
+6. [Etapa 3: Configuração de Segredos (Secret) e ConfigMap](#6-etapa-3-configuração-de-segredos-secret-e-configmap)
+7. [Etapa 4: Implementação na Raspberry Pi 4 com Cloudflare Tunnel](#7-etapa-4-implementação-na-raspberry-pi-4-com-cloudflare-tunnel)
+   * [7.1. Criação do Túnel no Cloudflare Zero Trust](#71-criação-do-túnel-no-cloudflare-zero-trust)
+   * [7.2. Aplicação do Conector cloudflared in-Cluster](#72-aplicação-do-conector-cloudflared-in-cluster)
+8. [Etapa 5: Implementação na VPS Cloud com Traefik + Cert-Manager TLS](#8-etapa-5-implementação-na-vps-cloud-com-traefik--cert-manager-tls)
+   * [8.1. Apontamento de DNS para maxwelldev.online](#81-apontamento-de-dns-para-maxwelldevonline)
+   * [8.2. Instalação do Cert-Manager v1.17.0](#82-instalação-do-cert-manager-v1170)
+   * [8.3. Emissão Automática de SSL com maxwellferreira@proton.me](#83-emissão-automática-de-ssl-com-maxwellferreiraprotonme)
+9. [Etapa 6: Deploy da Aplicação (Kustomize ou All-in-One)](#9-etapa-6-deploy-da-aplicação-kustomize-ou-all-in-one)
+10. [Etapa 7: Ciclo de Atualização Contínua (CI/CD Rollout)](#10-etapa-7-ciclo-de-atualização-contínua-cicd-rollout)
+11. [Etapa 8: Backup, Monitoramento e Persistência SQLite](#11-etapa-8-backup-monitoramento-e-persistência-sqlite)
+12. [Etapa 9: Troubleshooting e Diagnóstico Rápido](#12-etapa-9-troubleshooting-e-diagnóstico-rápido)
+13. [Quadro Comparativo: Raspberry Pi 4 vs VPS](#13-quadro-comparativo-raspberry-pi-4-vs-vps)
 
 ---
 
@@ -49,20 +53,20 @@ flowchart TD
     end
 
     GHA --> CI
-    CI -->|Push Multi-Arch| Hub[("🐳 Docker Hub:\napoio-tratamento:latest")]
+    CI -->|Push Multi-Arch| Hub[("🐳 Docker Hub:\nmaxwellrodriguesferreira/apoio-tratamento:latest")]
 
-    subgraph RPi ["🍓 Cluster K3s Edge: Raspberry Pi 4/5 (ARM64) — Farmácia / CGNAT"]
+    subgraph RPi4 ["🍓 Cluster K3s: Raspberry Pi 4 (ARM64) — Farmácia / CGNAT"]
         direction TB
-        CFT_Pod["☁️ Pod: cloudflare-tunnel\n(cloudflared connector)"] -->|Túnel Seguro Outbound| EdgeCF["Cloudflare Edge Anycast"]
-        CFT_Pod -->|HTTP Cluster DNS| K8sSvc_RPi["Service: contador-apoio-service:80"]
+        CFT_Pod["☁️ Pod: cloudflare-tunnel\n(cloudflared conector)"] -->|Túnel Seguro Outbound| EdgeCF["Cloudflare Edge Anycast\nhttps://maxwelldev.online"]
+        CFT_Pod -->|Roteamento Interno| K8sSvc_RPi["Service: contador-apoio-service:80"]
         K8sSvc_RPi --> App_RPi["🚀 Pod: contador-apoio-app:3000\n(Requests: 50m CPU / 128Mi RAM)"]
         App_RPi --> PVC_RPi[("💾 PVC: local-path\n/app/data (SQLite)")]
     end
 
-    subgraph VPS ["☁️ Cluster K3s Cloud: VPS Debian/Ubuntu (x86_64) — IP Público"]
+    subgraph VPS ["☁️ Cluster K3s: VPS Cloud (x86_64) — IP Público"]
         direction TB
-        DNS_VPS["🌐 DNS Registro A: apoio.suadrogaria.com.br"] -->|Portas 80 / 443| Traefik["🛡️ Traefik Ingress Controller"]
-        CM["📜 Cert-Manager\n(Let's Encrypt HTTP-01)"] -.->|Injeta TLS Secret| Traefik
+        DNS_VPS["🌐 DNS A: maxwelldev.online\n(Aponta para IP Público da VPS)"] -->|Portas 80 e 443| Traefik["🛡️ Traefik Ingress Controller"]
+        CM["📜 Cert-Manager v1.17.0\n(Let's Encrypt HTTP-01)\nEmail: maxwellferreira@proton.me"] -.->|Emite Certificado TLS| Traefik
         Traefik -->|Roteamento Interno| K8sSvc_VPS["Service: contador-apoio-service:80"]
         K8sSvc_VPS --> App_VPS["🚀 Pod: contador-apoio-app:3000\n(Requests: 50m CPU / 128Mi RAM)"]
         App_VPS --> PVC_VPS[("💾 PVC: local-path\n/app/data (SQLite)")]
@@ -71,62 +75,89 @@ flowchart TD
     Hub -.->|Pull linux/arm64| App_RPi
     Hub -.->|Pull linux/amd64| App_VPS
 
-    subgraph EXT ["Integrações de Dados & IA"]
-        App_RPi & App_VPS -.->|Modo Nuvem Principal| D1[("☁️ Cloudflare D1 Database")]
+    subgraph EXT ["Bancos de Dados & IA"]
+        App_RPi & App_VPS -.->|Nuvem Principal| D1[("☁️ Cloudflare D1 Database")]
         App_RPi & App_VPS -.->|IA Generativa| Gemini["🤖 Google Gemini 3.6 Flash"]
     end
 ```
 
 ---
 
-## 2. Requisitos de Hardware & Sistemas Homologados
+## 2. Desativação do Nginx Proxy Manager (Liberação das Portas 80 e 443)
 
-| Componente | Raspberry Pi 4 / 5 (Borda) | VPS Cloud (Hostinger, Hetzner, etc.) |
-| :--- | :--- | :--- |
-| **Arquitetura de CPU** | `arm64` / `aarch64` (ARM Cortex-A72 / A76) | `x86_64` / `amd64` (Intel Xeon / AMD EPYC) |
-| **Memória RAM** | 2 GB, 4 GB ou 8 GB (Recomendado: 4 GB+) | 1 GB, 2 GB ou 4 GB (Recomendado: 2 GB+) |
-| **Armazenamento** | 32 GB+ MicroSD Classe A2 ou SSD USB 3.0 | 20 GB+ NVMe SSD |
-| **Sistema Operacional** | **Raspberry Pi OS Lite 64-bit** (Debian 12 Bookworm) | **Ubuntu 24.04 LTS** ou **Debian 12 Bookworm** |
-| **Conectividade Externa** | Sem IP fixo / CGNAT (Requer Cloudflare Tunnel) | IP Público IPv4 Estático Dedicado (DNS Registro A) |
-| **Provisionador Storage** | `local-path` nativo do K3s | `local-path` nativo do K3s |
-| **Ingress Controller** | Traefik embutido ou Cloudflare Tunnel | Traefik nativo embutido |
+> ⚠️ **MANDATÓRIO ANTES DE INSTALAR O KUBERNETES**:
+> O **Traefik Ingress Controller** (embutido nativamente no K3s) escuta diretamente nas portas de rede **80** (HTTP) e **443** (HTTPS).
+> Se o **Nginx Proxy Manager** (ou contêineres Docker antigos) estiver em execução no host, o K3s falhará com erro de `bind: address already in use`.
 
-> ⚠️ **Aviso Crítico para Raspberry Pi**: O uso de sistema operacional de **64 bits** é estritamente obrigatório. Imagens de 32 bits (`armhf`) falharão na execução de contêineres modernos baseados em Node.js 24 Alpine.
+### 2.1. Localizar e Parar o Nginx Proxy Manager:
+Se o NPM foi instalado via Docker ou Docker Compose:
+
+```bash
+# Caso esteja rodando como contêiner avulso:
+sudo docker stop nginx-proxy-manager npm-db portainer 2>/dev/null || true
+sudo docker rm -f nginx-proxy-manager npm-db 2>/dev/null || true
+
+# Caso tenha sido iniciado via docker compose:
+# (Execute dentro da pasta onde o compose do NPM reside)
+sudo docker compose down 2>/dev/null || true
+```
+
+### 2.2. Desativar a inicialização automática do Docker (Opcional se for migrar 100% para K3s):
+Caso não vá mais utilizar o daemon do Docker no host:
+```bash
+sudo systemctl stop docker
+sudo systemctl disable docker
+```
+> *Nota: O K3s utiliza seu próprio runtime de contêineres embutido (`containerd`), não dependendo do daemon do Docker para funcionar.*
+
+### 2.3. Verificar se as portas 80 e 443 estão realmente livres:
+```bash
+sudo ss -tulpn | grep -E ':(80|443)\b'
+```
+Se o comando não retornar nenhuma linha, as portas estão completamente desimpedidas para o K3s assumir o controle.
 
 ---
 
-## 3. Etapa 1: Preparação do Sistema Operacional
+## 3. Requisitos de Hardware & Sistemas Homologados
 
-Execute os comandos a seguir logado via SSH no servidor host:
+| Especificação | 🍓 Raspberry Pi 4 (Borda) | ☁️ VPS Cloud (Hostinger, Hetzner, etc.) |
+| :--- | :--- | :--- |
+| **Arquitetura de CPU** | `arm64` / `aarch64` (ARM Cortex-A72) | `x86_64` / `amd64` (Intel Xeon / AMD EPYC) |
+| **Memória RAM** | 2 GB, 4 GB ou 8 GB (Recomendado 4 GB) | 1 GB, 2 GB ou 4 GB (Recomendado 2 GB) |
+| **Armazenamento** | 32 GB+ MicroSD Classe A2 ou SSD USB 3.0 | 20 GB+ NVMe SSD |
+| **Sistema Operacional** | **Raspberry Pi OS Lite 64-bit** (Debian Bookworm) | **Ubuntu 24.04 LTS** ou **Debian 12** |
+| **Domínio Pessoal** | `maxwelldev.online` (via Cloudflare Tunnel) | `maxwelldev.online` (via DNS Registro A) |
+| **Exposição Externa** | Cloudflare Tunnel in-cluster (Bypass CGNAT) | Traefik Ingress + Let's Encrypt TLS |
+| **SSL / TLS** | Terminado automaticamente na Cloudflare Edge | Cert-Manager (`maxwellferreira@proton.me`) |
+| **Portas Abertas no Modem**| **NENHUMA** (Túnel outbound criptografado) | Portas 80 e 443 liberadas no Firewall |
 
-### 3.1. Ajustes Obrigatórios para Raspberry Pi (cgroups e ZRAM)
+---
 
-O K3s necessita dos controladores de memória do kernel Linux (`cgroups`) ativados para isolar a memória dos pods.
+## 4. Etapa 1: Preparação do Sistema Operacional
 
-#### 1. Ativar cgroups no kernel da Raspberry Pi:
-Verifique o arquivo de boot correspondente à sua versão do Raspberry Pi OS:
+Execute os comandos a seguir conectado via SSH no servidor host:
 
+### 4.1. Ajustes Obrigatórios para Raspberry Pi 4 (cgroups e ZRAM)
+
+O kernel Linux da Raspberry Pi precisa ativar explicitamente os controladores de `cgroups` de memória para que o Kubernetes consiga isolar os recursos dos pods.
+
+#### 1. Ativar cgroups no boot da Raspberry Pi:
 ```bash
-# No Raspberry Pi OS Bookworm (recente):
 sudo nano /boot/firmware/cmdline.txt
-
-# Caso o diretório acima não exista (versões anteriores):
-# sudo nano /boot/cmdline.txt
+# (ou sudo nano /boot/cmdline.txt em versões anteriores do OS)
 ```
-
-Adicione **ao final da mesma linha** (não quebre em novas linhas), separado por espaço:
+Adicione **ao final da linha única** existente (separado por um espaço):
 ```text
 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
 ```
-Salve o arquivo com `Ctrl+O`, `Enter` e feche com `Ctrl+X`.
+Salve com `Ctrl+O`, `Enter` e saia com `Ctrl+X`.
 
-#### 2. Configurar ZRAM e Preservação do MicroSD:
-Evite travamentos por falta de memória RAM física comprimindo a memória dinamicamente:
+#### 2. Ativar ZRAM e Preservação do Cartão MicroSD:
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl wget git nano ca-certificates zram-tools open-iscsi
 
-# Configura ZRAM com algoritmo zstd ocupando até 50% da RAM
+# Ativa swap comprimido em memória ZRAM (reduz uso do MicroSD)
 sudo tee /etc/default/zramswap << 'EOF'
 ALGO=zstd
 PERCENT=50
@@ -134,56 +165,39 @@ PRIORITY=100
 EOF
 sudo systemctl restart zramswap
 
-# Reduz o uso agressivo de gravação no cartão de memória
+# Reduz tendência de gravação em disco
 echo 'vm.swappiness=10' | sudo tee -a /etc/sysctl.conf
 sudo sysctl -p
 
-# Reinicie a Raspberry Pi para carregar os novos parâmetros do kernel
+# Reinicie a Raspberry Pi para ativar as diretivas do kernel
 sudo reboot
 ```
 
 ---
 
-### 3.2. Ajustes para VPS Cloud (Firewall e Segurança)
+### 4.2. Ajustes para VPS Cloud (Firewall e Portas)
 
-Em sua VPS com Ubuntu ou Debian:
+Na VPS, configure o firewall UFW garantindo a liberação do tráfego web direto:
 ```bash
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y curl wget git nano ca-certificates open-iscsi ufw
 
-# Configurar Firewall UFW
+# Configurar regras básicas do Firewall
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw allow 22/tcp    # SSH
-sudo ufw allow 80/tcp    # HTTP (Let's Encrypt / Ingress)
-sudo ufw allow 443/tcp   # HTTPS (TLS / Ingress)
-
-# Caso deseje administrar o cluster remotamente do seu PC (opcional):
-# sudo ufw allow 6443/tcp # K3s Kubernetes API Server
-
+sudo ufw allow 80/tcp    # HTTP (Desafio Let's Encrypt / Traefik)
+sudo ufw allow 443/tcp   # HTTPS (Tráfego seguro com TLS)
 sudo ufw --force enable
 ```
 
 ---
 
-## 4. Etapa 2: Instalação e Configuração do K3s
+## 5. Etapa 2: Instalação e Configuração do K3s
 
-O **K3s** é empacotado como um binário único e leve que instala automaticamente `containerd`, `flannel`, `CoreDNS`, `metrics-server`, `Traefik` e o provisionador de storage `local-path`.
+### 5.1. Instalação na Raspberry Pi 4
 
-### 4.1. Instalação na VPS Cloud
-
-Na VPS, onde utilizaremos o Traefik nativo para receber conexões públicas nas portas 80 e 443:
-```bash
-curl -sfL https://get.k3s.io | sh -s - \
-  --write-kubeconfig-mode 644 \
-  --tls-san $(curl -s ifconfig.me)
-```
-
----
-
-### 4.2. Instalação na Raspberry Pi
-
-Na Raspberry Pi, para economizar o máximo de memória RAM e recursos da CPU para a aplicação:
+Na Raspberry Pi 4, instalamos o K3s com flags que otimizam o uso de memória:
 ```bash
 curl -sfL https://get.k3s.io | sh -s - \
   --write-kubeconfig-mode 644 \
@@ -192,10 +206,20 @@ curl -sfL https://get.k3s.io | sh -s - \
 
 ---
 
-### 4.3. Configuração do Acesso via kubectl
+### 5.2. Instalação na VPS Cloud
 
-Por padrão, o K3s instala o `kubectl` em `/usr/local/bin/kubectl`. Para permitir que o seu usuário comum gerencie o cluster sem necessitar de `sudo`:
+Na VPS, onde utilizaremos o Traefik nativo para receber as conexões de `maxwelldev.online`:
+```bash
+curl -sfL https://get.k3s.io | sh -s - \
+  --write-kubeconfig-mode 644 \
+  --tls-san $(curl -s ifconfig.me)
+```
 
+---
+
+### 5.3. Configuração de Acesso sem sudo (kubectl)
+
+Permita que o usuário gerencie o cluster diretamente:
 ```bash
 mkdir -p ~/.kube
 sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
@@ -203,39 +227,16 @@ sudo chown -R $USER:$USER ~/.kube
 echo 'export KUBECONFIG=~/.kube/config' >> ~/.bashrc
 source ~/.bashrc
 
-# Testar se o cluster está operacional:
+# Testar se o cluster está saudável
 kubectl get nodes -o wide
 ```
-
-A saída esperada deve apresentar o nó com o status **Ready**:
-```text
-NAME       STATUS   ROLES                  AGE   VERSION        INTERNAL-IP
-rpi-farm   Ready    control-plane,master   1m    v1.31.x+k3s1   192.168.1.100
-```
+Aguarde até que o nó apresente o status **Ready**.
 
 ---
 
-## 5. Etapa 3: Instalação do Cert-Manager (Exclusivo para VPS)
+## 6. Etapa 3: Configuração de Segredos (Secret) e ConfigMap
 
-> 💡 **Nota**: Se você estiver configurando a **Raspberry Pi com Cloudflare Tunnel**, pule esta etapa! O Cloudflare Tunnel cuida de 100% da criptografia e dos certificados SSL na borda automaticamente.
-
-Na VPS, o **Cert-Manager** emitirá certificados SSL válidos da Let's Encrypt para o seu domínio com renovação automática:
-
-```bash
-# Instala o Cert-Manager oficial v1.17.0
-kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.0/cert-manager.yaml
-
-# Aguarde até que todos os pods estejam em execução (Running):
-kubectl get pods -n cert-manager --watch
-```
-
-Pressione `Ctrl+C` quando os três pods (`cert-manager`, `cainjector` e `webhook`) estiverem `Running`.
-
----
-
-## 6. Etapa 4: Configuração de Variáveis (ConfigMap) e Segredos (Secret)
-
-Clone o repositório do projeto no servidor:
+Clone o repositório na máquina:
 ```bash
 git clone https://github.com/maxwellrodriguesferreira/contador-apoio-tratamento.git
 cd contador-apoio-tratamento
@@ -243,15 +244,12 @@ cd contador-apoio-tratamento
 
 ### 6.1. Criar o Namespace:
 ```bash
-kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/base/namespace.yaml
 ```
 
-### 6.2. Configurar o Secret da Aplicação:
+### 6.2. Criar a Secret com suas Credenciais Seguras:
 
-Você tem duas maneiras práticas de injetar suas credenciais:
-
-#### Opção A (Direto a partir do seu arquivo `.env` — Mais Fácil):
-Se você já possui o arquivo `.env` configurado na raiz do projeto:
+#### Opção A (A partir do arquivo `.env` já preenchido — Recomendado):
 ```bash
 kubectl create secret generic contador-apoio-secret \
   --namespace=contador-apoio \
@@ -259,220 +257,173 @@ kubectl create secret generic contador-apoio-secret \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-#### Opção B (Via arquivo YAML declarativo):
+#### Opção B (Via arquivo YAML modelo):
 ```bash
-cp k8s/secret.example.yaml k8s/secret.yaml
-nano k8s/secret.yaml
-```
-Preencha suas chaves reais:
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: contador-apoio-secret
-  namespace: contador-apoio
-type: Opaque
-stringData:
-  CLOUDFLARE_ACCOUNT_ID: "ef579acea3be117e010eafc168ca1c2f"
-  CLOUDFLARE_DATABASE_ID: "9e9cb6e6-6981-4357-9c76-acaff75f7377"
-  CLOUDFLARE_API_TOKEN: "cfut_seu_token_aqui"
-  GEMINI_API_KEY: "sua_chave_gemini_aqui"
-  ADMIN_EMAIL: "admin@suadrogaria.com.br"
-  ADMIN_PASSWORD: "SuaSenhaSegura123$"
-  ATENDENTE_EMAIL: ""
-  ATENDENTE_PASSWORD: ""
-  REDIS_URL: ""
-```
-Aplique o manifesto:
-```bash
-kubectl apply -f k8s/secret.yaml
+cp k8s/base/secret.example.yaml k8s/base/secret.yaml
+nano k8s/base/secret.yaml
+# Insira suas chaves do Cloudflare D1, Gemini AI e Senhas
+kubectl apply -f k8s/base/secret.yaml
 ```
 
 ---
 
-## 7. Etapa 5: Roteamento de Rede e Exposição
+## 7. Etapa 4: Implementação na Raspberry Pi 4 com Cloudflare Tunnel
 
-Escolha a seção correspondente ao seu ambiente:
+Como a Raspberry Pi opera sob **CGNAT** na farmácia, o conector **cloudflared** roda dentro do cluster e conecta com a Cloudflare sem abrir nenhuma porta no roteador.
 
-### 5.1. Cenário Raspberry Pi: Cloudflare Tunnel in-Cluster (Bypass CGNAT)
+### 7.1. Criação do Túnel no Cloudflare Zero Trust:
+1. Acesse o painel **[Cloudflare Zero Trust](https://one.dash.cloudflare.com/)**.
+2. Navegue até **Networks** > **Tunnels** > **Add a tunnel**.
+3. Selecione o conector **Cloudflared** e dê o nome: `k8s-rpi4-farmacia`.
+4. Copie o **token** do túnel exibido (o valor alfanumérico longo após `--token`).
+5. Configure o **Public Hostname**:
+   * **Domain**: `maxwelldev.online` (ou subdomínio como `apoio.maxwelldev.online`).
+   * **Service Type**: `HTTP`
+   * **URL**: `contador-apoio-service.contador-apoio.svc.cluster.local:80`
 
-Como a Raspberry Pi está na rede interna da farmácia sob CGNAT da operadora, não é possível receber conexões externas diretas nas portas 80/443. O conector **cloudflared** roda como um pod dentro do K3s e cria um canal seguro com a Cloudflare.
-
-#### 1. Criar o Túnel no Painel Cloudflare:
-1. Acesse o **[Cloudflare Zero Trust](https://one.dash.cloudflare.com/)**.
-2. Vá em **Networks** > **Tunnels** > **Create a tunnel**.
-3. Selecione o tipo **Cloudflared** e dê o nome: `k8s-rpi-farmacia`.
-4. Na tela de instalação, copie apenas o **Token alfanumérico** do túnel exibido no comando de exemplo (o valor após `--token`).
-
-#### 2. Configurar a Rota Pública (Public Hostname):
-No painel do túnel na Cloudflare:
-* **Public Hostname**: `apoio.suadrogaria.com.br` (ou o domínio desejado).
-* **Service Type**: `HTTP`
-* **URL**: `contador-apoio-service.contador-apoio.svc.cluster.local:80`
-
-#### 3. Criar a Secret do Token no Kubernetes:
+### 7.2. Aplicação do Conector cloudflared in-Cluster:
+Gere a secret do token no cluster:
 ```bash
 kubectl create secret generic cloudflare-tunnel-token \
   --namespace=contador-apoio \
-  --from-literal=token="COLE_AQUI_O_TOKEN_DO_TUNEL"
+  --from-literal=token="SEU_TOKEN_DO_TUNEL_COPIADO_AQUI"
 ```
 
-#### 4. Aplicar o Pod do Conector:
+Em seguida, aplique os manifestos da Raspberry Pi 4:
 ```bash
-kubectl apply -f k8s/cloudflare-tunnel.example.yaml
+# Método Kustomize:
+kubectl apply -k k8s/overlays/rpi4/
+
+# OU Método Manifesto Único:
+# kubectl apply -f k8s/rpi4-all-in-one.yaml
 ```
 
-O pod `cloudflare-tunnel` iniciará, conectará aos data centers da Cloudflare e roteará instantaneamente o tráfego do subdomínio público diretamente para o Service interno `contador-apoio-service:80`!
+Verifique se o túnel conectou com sucesso:
+```bash
+kubectl logs -f deployment/cloudflare-tunnel -n contador-apoio
+```
+Você verá a mensagem: `Registered tunnel connection ... Connection established`. O sistema já estará acessível publicamente em `https://maxwelldev.online`!
 
 ---
 
-### 5.2. Cenário VPS Cloud: Traefik Ingress + Let's Encrypt TLS
+## 8. Etapa 5: Implementação na VPS Cloud com Traefik + Cert-Manager TLS
 
-Na VPS com IP público dedicado:
+### 8.1. Apontamento de DNS para maxwelldev.online:
+No seu gerenciador de DNS (Cloudflare, Registro.br ou provedor do domínio):
+* Crie um **Registro A**:
+  * **Nome**: `@` (ou `maxwelldev.online`)
+  * **Destino / IPv4**: `IP_PUBLICO_DA_SUA_VPS`
+  * **Proxy Cloudflare**: Apenas DNS (*DNS only* / Nuvem Cinza) durante a emissão inicial.
+* Crie um **Registro A** adicional para `www`:
+  * **Nome**: `www`
+  * **Destino / IPv4**: `IP_PUBLICO_DA_SUA_VPS`
 
-#### 1. Apontar o Domínio no seu Provedor de DNS:
-Crie um registro do tipo **A**:
-* **Nome**: `apoio` (ou `@`)
-* **Conteúdo (Destino)**: `IP_PUBLICO_DA_SUA_VPS`
-* **TTL**: Automático ou 300 segundos
+### 8.2. Instalação do Cert-Manager v1.17.0:
+Instale o Cert-Manager oficial para gerenciar o ciclo de vida dos certificados SSL:
+```bash
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.0/cert-manager.yaml
 
-#### 2. Configurar o Issuer do Cert-Manager:
-Edite `k8s/issuer.yaml` e informe o seu e-mail para avisos de renovação:
+# Aguarde até que todos os 3 pods do cert-manager fiquem Running:
+kubectl get pods -n cert-manager --watch
+```
+Pressione `Ctrl+C` quando estiverem ativos.
+
+### 8.3. Emissão Automática de SSL com maxwellferreira@proton.me:
+Os manifestos [`k8s/overlays/vps/issuer.yaml`](file:///home/maxwell/contador-apoio-tratamento/k8s/overlays/vps/issuer.yaml) e [`k8s/vps-all-in-one.yaml`](file:///home/maxwell/contador-apoio-tratamento/k8s/vps-all-in-one.yaml) já estão configurados com o e-mail:
 ```yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: letsencrypt-contador-apoio
+  namespace: contador-apoio
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: seu-email@dominio.com.br
-```
-Aplique o issuer:
-```bash
-kubectl apply -f k8s/issuer.yaml
+    email: maxwellferreira@proton.me
+    privateKeySecretRef:
+      name: letsencrypt-account-key
+    solvers:
+      - http01:
+          ingress:
+            class: traefik
 ```
 
-#### 3. Configurar o Ingress:
-Edite `k8s/ingress.yaml` substituindo o host pelo seu domínio:
-```yaml
-spec:
-  ingressClassName: traefik
-  tls:
-    - hosts:
-        - apoio.suadrogaria.com.br
-      secretName: contador-apoio-tls
-  rules:
-    - host: apoio.suadrogaria.com.br
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: contador-apoio-service
-                port:
-                  name: http
-```
-Aplique o Ingress:
+Aplique os recursos na VPS:
 ```bash
-kubectl apply -f k8s/ingress.yaml
+# Método Kustomize:
+kubectl apply -k k8s/overlays/vps/
+
+# OU Método Manifesto Único:
+# kubectl apply -f k8s/vps-all-in-one.yaml
 ```
+
+Acompanhe a emissão do certificado Let's Encrypt:
+```bash
+kubectl get certificate -n contador-apoio --watch
+```
+Quando o campo **READY** marcar `True`, o certificado foi emitido e injetado automaticamente no Traefik Ingress. Acesse: `https://maxwelldev.online`.
 
 ---
 
-## 8. Etapa 6: Deploy da Aplicação no Cluster
+## 9. Etapa 6: Deploy da Aplicação (Kustomize ou All-in-One)
 
-Com os segredos e a rota de rede prontos, implante os componentes centrais da aplicação:
+Para implantar ou atualizar todos os componentes com uma única linha de comando:
 
+### Na Raspberry Pi 4:
 ```bash
-# Aplica ConfigMap, PVC, Service e Deployment
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/pvc.yaml
-kubectl apply -f k8s/service.yaml
-kubectl apply -f k8s/deployment.yaml
-
-# Ou aplique de forma declarativa via Kustomize:
-# kubectl apply -k k8s/
+kubectl apply -k k8s/overlays/rpi4/
 ```
 
-### Validação do Deploy:
-Acompanhe a inicialização dos pods:
+### Na VPS Cloud:
 ```bash
-kubectl get pods -n contador-apoio -o wide --watch
+kubectl apply -k k8s/overlays/vps/
 ```
 
-Aguarde até que o status mude para `Running` e `1/1` no campo READY:
+### Verificação do Status dos Pods:
+```bash
+kubectl get pods,svc,pvc,ingress -n contador-apoio -o wide
+```
+Saída esperada:
 ```text
-NAME                                  READY   STATUS    RESTARTS   AGE
-contador-apoio-app-798cb8c755-k8w54   1/1     Running   0          45s
-cloudflare-tunnel-6976f6b965-x4z7k    1/1     Running   0          2m
-```
+NAME                                      READY   STATUS    RESTARTS   AGE
+pod/contador-apoio-app-6997b6cf9c-98vwk   1/1     Running   0          45s
+pod/cloudflare-tunnel-789cf6d78-x2z7p     1/1     Running   0          1m
 
-### Verificação do Volume Persistente (PVC):
-```bash
-kubectl get pvc -n contador-apoio
-```
-O status deve ser `Bound`, vinculado à StorageClass `local-path`.
+NAME                             TYPE        CLUSTER-IP      PORT(S)   AGE
+service/contador-apoio-service   ClusterIP   10.43.120.45    80/TCP    1m
 
-### Verificação dos Logs:
-```bash
-kubectl logs -f deployment/contador-apoio-app -n contador-apoio
+NAME                                            STATUS   VOLUME                                     CAPACITY
+persistentvolumeclaim/contador-apoio-data-pvc   Bound    pvc-1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d   2Gi
 ```
-Você verá o motor SQLite inicializado, as migrações aplicadas e o servidor Express escutando na porta interna 3000.
 
 ---
 
-## 9. Etapa 7: Deploy Alternativo via Portainer Kubernetes
+## 10. Etapa 7: Ciclo de Atualização Contínua (CI/CD Rollout)
 
-Caso prefira gerenciar o cluster visualmente via interface web:
+Quando um novo código é enviado para a branch `main`, a pipeline do **GitHub Actions** compila os binários multiplataforma (`linux/amd64` e `linux/arm64`) e publica a imagem no Docker Hub:
+`maxwellrodriguesferreira/apoio-tratamento:latest`
 
-### 9.1. Instalar o Portainer CE dentro do K3s:
-```bash
-# Cria o namespace e instala o Portainer
-kubectl apply -n portainer -f https://raw.githubusercontent.com/portainer/k8s/master/deploy/manifests/portainer/portainer.yaml
-
-# Verificar se o Portainer está ativo:
-kubectl get pods -n portainer
-```
-
-Acesse a interface web através do IP do servidor na porta NodePort correspondente (ou configure um Ingress para `portainer.seudominio.com`).
-
-### 9.2. Subir a Aplicação via Web Editor:
-1. No menu lateral, acesse **Applications** > **Add application** ou **Custom Templates** / **Stacks**.
-2. Cole o conteúdo de [`k8s/portainer-all-in-one.example.yaml`](file:///home/maxwell/contador-apoio-tratamento/k8s/portainer-all-in-one.example.yaml).
-3. Preencha suas credenciais nos blocos de `Secret` e clique em **Deploy**.
-
----
-
-## 10. Etapa 8: Ciclo de Atualização Contínua (CI/CD Rollout)
-
-Quando um novo commit é enviado para o branch `main` do GitHub, a esteira do **GitHub Actions** compila automaticamente os binários para `linux/amd64` e `linux/arm64` e publica a nova tag `latest` no Docker Hub.
-
-Para atualizar o cluster em produção com **Zero Downtime**:
+Para atualizar a aplicação em produção com **Zero Downtime**:
 
 ```bash
-# Força o Kubernetes a baixar a nova imagem e recriar o Pod:
+# Força o download da nova imagem e reinicia os pods de forma graciosa:
 kubectl rollout restart deployment/contador-apoio-app -n contador-apoio
 
-# Acompanhar a troca do pod em tempo real:
+# Acompanha a substituição do pod:
 kubectl rollout status deployment/contador-apoio-app -n contador-apoio
 ```
 
-### Automação com Cron Job (Opcional):
-Caso deseje que o cluster verifique e aplique atualizações automaticamente todas as madrugadas:
-```bash
-(crontab -l 2>/dev/null; echo "0 4 * * * /usr/local/bin/kubectl rollout restart deployment/contador-apoio-app -n contador-apoio >/dev/null 2>&1") | crontab -
-```
-
 ---
 
-## 11. Etapa 9: Rotinas de Backup, Monitoramento e Manutenção
+## 11. Etapa 8: Backup, Monitoramento e Persistência SQLite
 
-### 11.1. Localização dos Dados do SQLite no Host
-O provisionador `local-path` do K3s armazena os arquivos físicos do PersistentVolumeClaim no disco host em:
+### 11.1. Localização Física dos Dados no Host:
+O provisionador nativo `local-path` do K3s grava os dados do volume persistente diretamente no host em:
 ```text
 /var/lib/rancher/k3s/storage/pvc-UUID_contador-apoio_contador-apoio-data-pvc/
 ```
 
-### 11.2. Script de Backup Quente do Banco de Dados:
-Crie um script de backup seguro utilizando a API nativa do SQLite ou cópia do diretório:
+### 11.2. Script Automatizado de Backup Quente (Hot Backup):
 ```bash
 sudo tee /usr/local/bin/backup-k8s-apoio.sh << 'EOF'
 #!/bin/bash
@@ -480,16 +431,14 @@ BACKUP_DIR="/root/backups_apoio_k8s"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 mkdir -p "$BACKUP_DIR"
 
-# Executa cópia snapshot do banco via kubectl exec
 POD_NAME=$(kubectl get pod -n contador-apoio -l app.kubernetes.io/name=contador-apoio -o jsonpath="{.items[0].metadata.name}")
 
 if [ -n "$POD_NAME" ]; then
     kubectl exec -n contador-apoio "$POD_NAME" -- sqlite3 /app/data/local.sqlite ".backup '/app/data/backup_temp.sqlite'" 2>/dev/null || true
     kubectl cp -n contador-apoio "$POD_NAME":/app/data/backup_temp.sqlite "$BACKUP_DIR/db_${TIMESTAMP}.sqlite" 2>/dev/null || true
     gzip -9 "$BACKUP_DIR/db_${TIMESTAMP}.sqlite"
-    # Mantém apenas os últimos 14 backups
     find "$BACKUP_DIR" -type f -name "*.sqlite.gz" -mtime +14 -delete
-    echo "[OK] Backup gerado com sucesso: $BACKUP_DIR/db_${TIMESTAMP}.sqlite.gz"
+    echo "[OK] Backup gerado: $BACKUP_DIR/db_${TIMESTAMP}.sqlite.gz"
 else
     echo "[ERRO] Pod da aplicação não encontrado."
 fi
@@ -500,54 +449,51 @@ sudo chmod +x /usr/local/bin/backup-k8s-apoio.sh
 
 ---
 
-## 12. Etapa 10: Troubleshooting e Resolução de Problemas
+## 12. Etapa 9: Troubleshooting e Diagnóstico Rápido
 
-### 1. Pod preso em `CrashLoopBackOff` ou Erro de Permissão no SQLite:
-* **Causa**: O volume persistente montado em `/app/data` está com permissões root.
-* **Solução**: O manifesto `k8s/deployment.yaml` já define `securityContext.fsGroup: 1000`. Se necessário, ajuste no nó host:
+### 1. Conflito de porta 80/443 ao iniciar o K3s Traefik Ingress:
+* **Sintoma**: Pod do Traefik em `CrashLoopBackOff` ou porta 80 inacessível.
+* **Causa**: O **Nginx Proxy Manager** ainda está rodando no Docker host.
+* **Solução**:
+  ```bash
+  sudo docker stop nginx-proxy-manager npm-db 2>/dev/null || true
+  sudo docker compose down 2>/dev/null || true
+  sudo systemctl restart k3s
+  ```
+
+### 2. Pod em `CrashLoopBackOff` com erro de permissão no SQLite:
+* **Causa**: Volume com permissão root no host.
+* **Solução**: O deployment já usa `securityContext.fsGroup: 1000`. Para forçar a permissão:
   ```bash
   sudo chown -R 1000:1000 /var/lib/rancher/k3s/storage/*contador-apoio*
   ```
 
-### 2. K3s não inicializa na Raspberry Pi (`failed to find memory cgroup`):
-* **Causa**: A linha `cgroup_memory=1 cgroup_enable=memory` não foi inserida corretamente em `/boot/firmware/cmdline.txt`.
-* **Solução**: Revise o arquivo garantindo que todo o texto esteja em uma **única linha contínua** e reinicie a placa.
+### 3. K3s não inicia na Raspberry Pi 4 (`failed to find memory cgroup`):
+* **Causa**: Parâmetros de `cgroups` ausentes no `/boot/firmware/cmdline.txt`.
+* **Solução**: Certifique-se de que `cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory` esteja inserido em **linha única** e reinicie a placa com `sudo reboot`.
 
-### 3. Falha de Certificado SSL no Ingress da VPS:
+### 4. Falha na emissão do Certificado SSL Let's Encrypt na VPS:
 * **Diagnóstico**:
   ```bash
   kubectl describe certificate contador-apoio-tls -n contador-apoio
   kubectl describe challenge -n contador-apoio
   ```
-* **Causa mais comum**: O apontamento de DNS (Registro A) ainda não propagou ou o Firewall UFW está bloqueando a porta 80 (`sudo ufw allow 80/tcp`).
-
-### 4. Reinicialização e Drenagem Segura do Nó:
-Para reiniciar a máquina física com segurança sem corromper o banco:
-```bash
-# Drena os pods com segurança
-kubectl drain $(hostname) --ignore-daemonsets --delete-emptydir-data
-
-# Reinicia a máquina
-sudo reboot
-
-# Após reiniciar, reabilite o agendamento de pods no nó:
-kubectl uncordon $(hostname)
-```
+* **Causa**: Registro DNS A de `maxwelldev.online` não propagou ou o firewall UFW está bloqueando a porta 80 (`sudo ufw allow 80/tcp`).
 
 ---
 
-## 13. Quadro Comparativo: Raspberry Pi vs VPS
+## 13. Quadro Comparativo: Raspberry Pi 4 vs VPS
 
-| Critério | 🍓 Raspberry Pi 4/5 (Borda) | ☁️ VPS Cloud (Nuvem) |
+| Critério | 🍓 Raspberry Pi 4 (Borda / Farmácia) | ☁️ VPS Cloud (Nuvem / Hostinger) |
 | :--- | :--- | :--- |
-| **Distribuição K8s** | K3s (Consumo ~450 MB RAM) | K3s (Consumo ~550 MB RAM) |
-| **Arquitetura Container** | `linux/arm64` | `linux/amd64` |
-| **Localização Física** | Balcão da Farmácia / Rede Interna | Data Center Global (Hetzner, Hostinger) |
-| **Tipo de Conexão** | CGNAT / IP Dinâmico Residencial | Endereço IPv4 Público Estático |
-| **Estratégia de Ingress** | **Cloudflare Tunnel (cloudflared pod)** | **Traefik Ingress Controller + Cert-Manager** |
-| **Necessita abrir portas no modem?** | **NÃO** (Conexão de saída criptografada) | Sim (Portas 80 e 443 liberadas no Firewall) |
-| **Custos Recorrentes** | R$ 0,00 de hospedagem mensal | R$ 25 a R$ 60 / mês |
-| **Resiliência a Queda de Internet** | Continua operando na rede local da farmácia | Requer conexão contínua com a internet |
+| **Distribuição Kubernetes** | K3s (Consumo ~450 MB RAM) | K3s (Consumo ~550 MB RAM) |
+| **Arquitetura de Compilação** | `linux/arm64` | `linux/amd64` |
+| **Tipo de Conexão de Rede** | Sem IP fixo / CGNAT | Endereço IPv4 Público Estático |
+| **Estratégia de Exposição** | **Cloudflare Tunnel in-cluster** | **Traefik Ingress + Let's Encrypt TLS** |
+| **Domínio Configurado** | `maxwelldev.online` | `maxwelldev.online` / `www.maxwelldev.online` |
+| **E-mail SSL** | Gerenciado na Cloudflare Edge | `maxwellferreira@proton.me` (Cert-Manager) |
+| **Abertura de Portas no Roteador** | **0 portas abertas** (Zero Trust) | Portas 80 e 443 abertas no Firewall |
+| **Nginx Proxy Manager** | **Desativado** (Liberar RAM) | **Desativado** (Liberar portas 80/443 para Traefik) |
 
 ---
-*Manual desenvolvido em conformidade com as diretrizes arquiteturais do projeto Apoio ao Tratamento.*
+*Manual elaborado especificamente para o ecossistema Apoio ao Tratamento.*

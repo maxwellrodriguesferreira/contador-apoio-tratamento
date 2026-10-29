@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: contador-apoio-data-pvc
+  namespace: contador-apoio
+  labels:
+    app.kubernetes.io/name: contador-apoio
+    app.kubernetes.io/component: storage
+    app.kubernetes.io/part-of: contador-apoio-tratamento
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  # Provisionador nativo do K3s (Raspberry Pi 4 e VPS)
+  storageClassName: local-path
