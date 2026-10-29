@@ -23,15 +23,15 @@ export const Pagination: React.FC<PaginationProps> = ({
   const endItem = Math.min(currentPage * pageSize, totalItems);
 
   return (
-    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 py-3 px-4 bg-surface-container-lowest border-t border-outline-variant/30 text-xs text-on-surface-variant">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 py-3 px-3 sm:px-4 bg-surface-container-lowest border-t border-outline-variant/30 text-xs text-on-surface-variant">
+      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 text-center sm:text-left">
         <span>
           Mostrando <strong className="text-on-surface font-semibold">{startItem}</strong> a{' '}
           <strong className="text-on-surface font-semibold">{endItem}</strong> de{' '}
-          <strong className="text-on-surface font-semibold">{totalItems}</strong> registros
+          <strong className="text-on-surface font-semibold">{totalItems}</strong>
         </span>
-        <div className="flex items-center gap-1.5 ml-2">
-          <span>Itens por página:</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-outline">Por pág:</span>
           <select
             value={pageSize}
             onChange={(e) => onPageSizeChange(Number(e.target.value))}
@@ -50,37 +50,41 @@ export const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
-          className="p-1 rounded hover:bg-surface-container disabled:opacity-40 disabled:pointer-events-none text-on-surface transition-colors"
+          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface-container disabled:opacity-30 disabled:pointer-events-none text-on-surface transition-colors"
           title="Primeira Página"
+          aria-label="Primeira Página"
         >
           <span className="material-symbols-outlined text-[18px]">first_page</span>
         </button>
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="p-1 rounded hover:bg-surface-container disabled:opacity-40 disabled:pointer-events-none text-on-surface transition-colors"
+          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface-container disabled:opacity-30 disabled:pointer-events-none text-on-surface transition-colors"
           title="Página Anterior"
+          aria-label="Página Anterior"
         >
           <span className="material-symbols-outlined text-[18px]">chevron_left</span>
         </button>
 
-        <span className="px-3 py-1 bg-surface-container-low rounded font-semibold text-on-surface">
-          {currentPage} de {Math.max(1, totalPages)}
+        <span className="px-3 py-1 bg-surface-container-low rounded-lg font-semibold text-xs text-on-surface whitespace-nowrap">
+          {currentPage} / {Math.max(1, totalPages)}
         </span>
 
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages || totalPages === 0}
-          className="p-1 rounded hover:bg-surface-container disabled:opacity-40 disabled:pointer-events-none text-on-surface transition-colors"
+          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface-container disabled:opacity-30 disabled:pointer-events-none text-on-surface transition-colors"
           title="Próxima Página"
+          aria-label="Próxima Página"
         >
           <span className="material-symbols-outlined text-[18px]">chevron_right</span>
         </button>
         <button
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage >= totalPages || totalPages === 0}
-          className="p-1 rounded hover:bg-surface-container disabled:opacity-40 disabled:pointer-events-none text-on-surface transition-colors"
+          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-surface-container disabled:opacity-30 disabled:pointer-events-none text-on-surface transition-colors"
           title="Última Página"
+          aria-label="Última Página"
         >
           <span className="material-symbols-outlined text-[18px]">last_page</span>
         </button>

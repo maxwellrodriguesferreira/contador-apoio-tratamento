@@ -40,30 +40,30 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-surface/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-on-surface/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className={`w-full ${maxWidthStyles[maxWidth]} bg-surface-container-lowest rounded-2xl shadow-modal border border-outline-variant/40 flex flex-col overflow-hidden max-h-[90vh] animate-in zoom-in-95 duration-200`}
+        className={`w-full ${maxWidthStyles[maxWidth]} bg-surface-container-lowest rounded-2xl shadow-modal border border-outline-variant/40 flex flex-col overflow-hidden max-h-[92vh] animate-in zoom-in-95 duration-200`}
         role="dialog"
         aria-modal="true"
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30 bg-surface-container-low/50">
-          <div className="flex flex-col">
-            <h3 className="font-bold text-lg text-on-surface leading-tight">{title}</h3>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-outline-variant/30 bg-surface-container-low/50">
+          <div className="flex flex-col pr-2">
+            <h3 className="font-bold text-base sm:text-lg text-on-surface leading-tight">{title}</h3>
             {subtitle && <p className="text-xs text-on-surface-variant mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors"
+            className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container transition-colors shrink-0"
             aria-label="Fechar modal"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto flex-1">{children}</div>
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">{children}</div>
 
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-outline-variant/30 bg-surface-container-low/40">
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 border-t border-outline-variant/30 bg-surface-container-low/40">
             {footer}
           </div>
         )}

@@ -348,10 +348,10 @@ export const RelatoriosPage: React.FC = () => {
       </div>
 
       {/* Seletor de Abas de Relatório */}
-      <div className="flex items-center gap-1 p-1 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-subtle w-fit">
+      <div className="flex items-center gap-1 p-1 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-subtle w-full sm:w-fit overflow-x-auto">
         <button
           onClick={() => setActiveTab('diario')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
             activeTab === 'diario'
               ? 'bg-primary text-on-primary shadow-sm'
               : 'text-on-surface-variant hover:bg-surface-container'
@@ -362,7 +362,7 @@ export const RelatoriosPage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('mensal')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
             activeTab === 'mensal'
               ? 'bg-primary text-on-primary shadow-sm'
               : 'text-on-surface-variant hover:bg-surface-container'
@@ -373,7 +373,7 @@ export const RelatoriosPage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('atendente')}
-          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+          className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
             activeTab === 'atendente'
               ? 'bg-primary text-on-primary shadow-sm'
               : 'text-on-surface-variant hover:bg-surface-container'

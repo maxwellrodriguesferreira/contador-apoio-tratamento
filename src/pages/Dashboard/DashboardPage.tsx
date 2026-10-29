@@ -380,7 +380,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
       </div>
 
       {/* Grid de 6 StatCards Operacionais de Apoio ao Tratamento */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-2.5 sm:gap-4">
         {/* 1. Apoios Hoje */}
         <StatCard
           label="Apoios Hoje"
@@ -727,7 +727,161 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Visualização em Cards para Dispositivos Móveis (Celulares) */}
+          <div className="md:hidden p-3 space-y-3">
+            {consolidatedAttendantsPerformance.length === 0 ? (
+              <div className="p-6 text-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-[32px] text-outline mb-1">
+                  person_off
+                </span>
+                <p className="font-semibold text-xs text-on-surface">Nenhum atendente cadastrado ainda</p>
+                <p className="text-[11px] text-outline mt-0.5">
+                  Acesse o menu Atendentes para cadastrar os profissionais da drogaria.
+                </p>
+              </div>
+            ) : (
+              <>
+                {consolidatedAttendantsPerformance.map((item) => (
+                  <div
+                    key={item.attendantId}
+                    className={`p-3.5 rounded-xl border transition-all ${
+                      user?.attendantId === item.attendantId
+                        ? 'bg-primary/5 border-primary/40 shadow-sm'
+                        : 'bg-surface-container-lowest border-outline-variant/30'
+                    }`}
+                  >
+                    {/* Topo do Card: Posição, Nome e Status */}
+                    <div className="flex items-center justify-between pb-2 mb-2 border-b border-outline-variant/20">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold shrink-0 ${
+                            item.position === 1
+                              ? 'bg-amber-100 text-amber-900 border border-amber-300 shadow-xs'
+                              : item.position === 2
+                              ? 'bg-slate-200 text-slate-800'
+                              : item.position === 3
+                              ? 'bg-amber-700/20 text-amber-900'
+                              : 'bg-surface-container text-outline'
+                          }`}
+                        >
+                          {item.position}º
+                        </span>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-sm text-on-surface leading-tight">
+                              {item.attendantName}
+                            </span>
+                            {user?.attendantId === item.attendantId && (
+                              <span className="px-1.5 py-0.2 rounded bg-primary text-on-primary text-[9px] font-bold">
+                                Você
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-outline font-mono">Cód. {item.attendantCode}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            item.active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                          }`}
+                        >
+                          {item.active ? 'Ativo' : 'Inativo'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Grade de 3 Métricas: Apoio, Na Rotina e Total Geral */}
+                    <div className="grid grid-cols-3 gap-2 py-1 text-center">
+                      {/* Apoio */}
+                      <div className="p-2 rounded-lg bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-800/40">
+                        <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 block">
+                          Apoio
+                        </span>
+                        <span className="text-base font-extrabold text-blue-700 dark:text-blue-300">
+                          {item.treatmentSupportMonth}
+                        </span>
+                        <span className="text-[9px] text-blue-600/80 dark:text-blue-400 block">
+                          ({item.treatmentSupportToday} hoje)
+                        </span>
+                      </div>
+
+                      {/* Na Rotina */}
+                      <div className="p-2 rounded-lg bg-purple-50/70 dark:bg-purple-950/30 border border-purple-200/50 dark:border-purple-800/40">
+                        <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 block">
+                          Na Rotina
+                        </span>
+                        <span className="text-base font-extrabold text-purple-700 dark:text-purple-300">
+                          {item.routineCareMonth}
+                        </span>
+                        <span className="text-[9px] text-purple-600/80 dark:text-purple-400 block">
+                          ({item.routineCareToday} hoje)
+                        </span>
+                      </div>
+
+                      {/* Total Geral */}
+                      <div className="p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300/60 dark:border-emerald-800/60">
+                        <span className="text-[10px] font-extrabold text-emerald-800 dark:text-emerald-300 block">
+                          Total Geral
+                        </span>
+                        <span className="text-base font-black text-emerald-800 dark:text-emerald-200">
+                          {item.totalServicesMonth}
+                        </span>
+                        <span className="text-[9px] text-emerald-700/80 dark:text-emerald-400 block font-semibold">
+                          ({item.totalServicesToday} hoje)
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Barra de Participação */}
+                    <div className="mt-2.5 pt-2 border-t border-outline-variant/20 flex items-center justify-between text-[11px]">
+                      <span className="text-outline">Participação na Equipe:</span>
+                      <span className="font-extrabold text-on-surface bg-surface-container px-2 py-0.5 rounded text-[10px]">
+                        {item.percentageOfMonth}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Total da Equipe Mobile */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-br from-emerald-500/10 via-surface-container-low to-surface-container-low border-2 border-emerald-500/40 shadow-sm">
+                  <div className="flex items-center justify-between pb-2 mb-2 border-b border-emerald-500/20">
+                    <div className="flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[18px] text-emerald-700">groups</span>
+                      <span className="font-extrabold text-xs text-emerald-950 dark:text-emerald-200 uppercase tracking-wider">
+                        Total da Equipe
+                      </span>
+                    </div>
+                    <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-extrabold text-[10px]">
+                      100%
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <span className="text-[10px] font-bold text-primary block">Apoio</span>
+                      <span className="text-base font-bold text-primary">{teamTotal.treatmentSupportMonth}</span>
+                      <span className="text-[9px] text-outline block">({teamTotal.treatmentSupportToday} hoje)</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-secondary block">Na Rotina</span>
+                      <span className="text-base font-bold text-secondary">{teamTotal.routineCareMonth}</span>
+                      <span className="text-[9px] text-outline block">({teamTotal.routineCareToday} hoje)</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-extrabold text-emerald-800 dark:text-emerald-300 block">Total Geral</span>
+                      <span className="text-base font-black text-emerald-800 dark:text-emerald-200">{teamTotal.totalServicesMonth}</span>
+                      <span className="text-[9px] text-emerald-700 dark:text-emerald-400 block font-semibold">({teamTotal.totalServicesToday} hoje)</span>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Tabela Completa para Tablets e Desktops (md: e superior) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-surface-container-low text-on-surface-variant uppercase font-bold text-[11px] border-b border-outline-variant/30">
                 <tr>

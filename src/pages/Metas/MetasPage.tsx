@@ -305,7 +305,7 @@ export const MetasPage: React.FC = () => {
       </div>
 
       {/* Cards de Metas Vigentes Atuais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card: Meta Diária Drogaria */}
         <div className="bg-surface-container-lowest rounded-xl border border-primary/20 shadow-subtle p-5 flex flex-col justify-between transition-all hover:border-primary/40">
           <div>
@@ -604,8 +604,91 @@ export const MetasPage: React.FC = () => {
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <>
+            {/* Visualização em Cards para Dispositivos Móveis (md:hidden) */}
+            <div className="md:hidden divide-y divide-outline-variant/20">
+              {filteredGoals.map((g) => {
+                const isStore = g.type === 'DAILY_STORE' || g.type === 'MONTHLY_STORE';
+                return (
+                  <div key={`mobile-goal-${g.id}`} className="p-4 space-y-2.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            isStore ? 'bg-primary/10 text-primary' : 'bg-secondary/10 text-secondary'
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">
+                            {isStore ? 'store' : 'person'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-on-surface block leading-tight">
+                            {formatGoalTypeName(g.type, g.attendantId)}
+                          </span>
+                          <span className="text-[10px] text-outline">
+                            {g.type === 'DAILY_STORE' && 'Meta Diária Geral'}
+                            {g.type === 'MONTHLY_STORE' && 'Meta Mensal Geral'}
+                            {g.type === 'DAILY_ATTENDANT' && 'Meta Diária Individual'}
+                            {g.type === 'MONTHLY_ATTENDANT' && 'Meta Mensal Individual'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          g.active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {g.active ? 'Ativa' : 'Encerrada'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-baseline justify-between p-2.5 rounded-lg bg-surface-container-low">
+                      <div>
+                        <span className="text-[10px] text-outline block">Alvo Planejado</span>
+                        <span className="text-xl font-extrabold text-primary">
+                          {g.targetValue}{' '}
+                          <span className="text-xs font-semibold text-on-surface-variant">apoios</span>
+                        </span>
+                      </div>
+                      <div className="text-right text-[11px]">
+                        <span className="text-outline block">Vigência</span>
+                        <span className="font-semibold text-on-surface">
+                          {formatDateBR(g.startDate)}
+                        </span>
+                        <span className="text-outline block text-[10px]">
+                          até {g.endDate ? formatDateBR(g.endDate) : 'Em vigor'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {isAdmin && (
+                      <div className="flex items-center justify-end gap-2 pt-1 border-t border-outline-variant/20">
+                        <button
+                          onClick={() => handleOpenEdit(g)}
+                          className="px-3 py-1.5 rounded-lg text-primary hover:bg-primary/10 font-bold text-xs flex items-center gap-1 transition-colors border border-primary/20"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">edit</span>
+                          <span>Editar</span>
+                        </button>
+                        <button
+                          onClick={() => setGoalToDelete(g)}
+                          className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors border border-outline-variant/30"
+                          title="Excluir meta"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Tabela Completa para Tablets e Telas Maiores (md: e superior) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
               <thead className="bg-surface-container-low text-on-surface-variant uppercase font-bold text-[11px] border-b border-outline-variant/30">
                 <tr>
                   <th className="px-5 py-3.5">Tipo da Meta / Destinatário</th>
@@ -703,7 +786,8 @@ export const MetasPage: React.FC = () => {
               </tbody>
             </table>
           </div>
-        )}
+        </>
+      )}
 
         {/* Rodapé da tabela com sumário */}
         {filteredGoals.length > 0 && (

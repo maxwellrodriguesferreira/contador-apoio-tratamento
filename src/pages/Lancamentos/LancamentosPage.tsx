@@ -528,7 +528,147 @@ export const LancamentosPage: React.FC = () => {
 
       {/* Tabela de Lançamentos */}
       <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-subtle overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Visualização em Cards para Dispositivos Móveis (Celulares) */}
+        <div className="md:hidden divide-y divide-outline-variant/20">
+          {paginatedLancamentos.length === 0 ? (
+            <div className="p-8 text-center text-on-surface-variant">
+              <span className="material-symbols-outlined text-[36px] text-outline mb-2">
+                search_off
+              </span>
+              <p className="font-semibold text-sm">Nenhum lançamento encontrado</p>
+              <p className="text-xs text-outline mt-1">Ajuste os filtros ou registre um novo atendimento.</p>
+            </div>
+          ) : (
+            paginatedLancamentos.map((item) => {
+              const attendant = attendantsMap.get(item.attendantId);
+              const isDeleted = !!item.deletedAt;
+              const isSupport = item.serviceType === 'SUPPORT';
+
+              return (
+                <div
+                  key={`mobile-${item.serviceType}-${item.id}`}
+                  className={`p-4 transition-colors ${
+                    isDeleted ? 'bg-rose-50/40 dark:bg-rose-950/20 opacity-80' : ''
+                  }`}
+                >
+                  {/* Topo do Card Mobile */}
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {isSupport ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/50">
+                          <span className="material-symbols-outlined text-[15px] text-blue-600">health_and_safety</span>
+                          Apoio
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-bold bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/50">
+                          <span className="material-symbols-outlined text-[15px] text-purple-600">assignment_turned_in</span>
+                          Na Rotina
+                        </span>
+                      )}
+                      <span className="text-xs font-bold text-on-surface">
+                        {formatDateBR(item.date)}
+                      </span>
+                    </div>
+
+                    <div>
+                      {isDeleted ? (
+                        <Badge variant="error" icon="delete">
+                          Excluído
+                        </Badge>
+                      ) : (
+                        <Badge variant="success" icon="check_circle">
+                          Ativo
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Corpo do Card: Atendente e Quantidade */}
+                  <div className="flex items-center justify-between gap-2 my-2.5">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm text-on-surface">
+                        {attendant?.name || 'Desconhecido'}
+                      </span>
+                      <span className="text-[11px] text-outline font-mono">
+                        Cód. {attendant?.code || '-'}
+                      </span>
+                    </div>
+
+                    <div className="text-right">
+                      <span
+                        className={`text-xl font-extrabold ${
+                          isSupport ? 'text-blue-600 dark:text-blue-400' : 'text-purple-600 dark:text-purple-400'
+                        }`}
+                      >
+                        +{item.quantity}
+                      </span>
+                      <span className="text-[10px] text-outline block">
+                        {isSupport ? 'apoios' : 'rotina'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Observação */}
+                  {item.observation && (
+                    <div className="my-2 p-2 rounded-lg bg-surface-container-low text-xs text-on-surface-variant italic border border-outline-variant/20">
+                      "{item.observation}"
+                    </div>
+                  )}
+
+                  {/* Metadados e Ações Touch-Friendly */}
+                  <div className="flex items-center justify-between pt-2.5 mt-2 border-t border-outline-variant/20 flex-wrap gap-2 text-xs">
+                    <div className="text-[10px] text-outline truncate max-w-[170px]">
+                      {item.createdBy} • {formatDateTimeBR(item.createdAt)}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 ml-auto">
+                      <button
+                        onClick={() => setViewingItem(item)}
+                        className="px-2.5 py-1.5 rounded-lg text-outline hover:text-primary hover:bg-surface-container transition-colors text-xs font-semibold flex items-center gap-1 border border-outline-variant/30"
+                        title="Visualizar detalhes"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">visibility</span>
+                        <span>Ver</span>
+                      </button>
+
+                      {!isDeleted ? (
+                        <>
+                          <button
+                            onClick={() => handleOpenEdit(item)}
+                            className="px-2.5 py-1.5 rounded-lg text-outline hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors text-xs font-semibold flex items-center gap-1 border border-outline-variant/30"
+                            title="Editar registro"
+                          >
+                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                            <span>Editar</span>
+                          </button>
+                          <button
+                            onClick={() => setDeletingItem(item)}
+                            className="p-1.5 rounded-lg text-outline hover:text-error hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors border border-outline-variant/30"
+                            title="Excluir lançamento"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => setRestoringItem(item)}
+                          className="px-2.5 py-1.5 rounded-lg text-emerald-600 hover:text-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 transition-colors font-bold flex items-center gap-1 text-xs border border-emerald-200 dark:border-emerald-800"
+                          title="Restaurar registro excluído"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">restore_from_trash</span>
+                          <span>Restaurar</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Tabela Completa para Tablets e Telas Maiores (md: e superior) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-low text-on-surface-variant uppercase font-bold text-[11px] border-b border-outline-variant/30">
               <tr>

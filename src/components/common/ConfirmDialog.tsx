@@ -33,13 +33,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       maxWidth="md"
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={isLoading}>
+          <Button variant="outline" onClick={onClose} disabled={isLoading} className="w-full sm:w-auto">
             {cancelLabel}
           </Button>
           <Button
             variant={variant === 'destructive' ? 'destructive' : variant === 'success' ? 'success' : 'primary'}
             onClick={onConfirm}
             isLoading={isLoading}
+            className="w-full sm:w-auto"
           >
             {confirmLabel}
           </Button>

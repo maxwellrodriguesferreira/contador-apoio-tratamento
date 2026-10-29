@@ -16,24 +16,24 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         {/* Botão Mobile Hamburger */}
         <button
           onClick={onToggleMobileMenu}
-          className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container lg:hidden"
-          aria-label="Abrir menu"
+          className="w-10 h-10 rounded-lg text-on-surface-variant hover:bg-surface-container flex items-center justify-center lg:hidden transition-colors"
+          aria-label="Abrir menu lateral"
         >
           <span className="material-symbols-outlined text-[24px]">menu</span>
         </button>
 
-        <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-surface-container text-on-surface text-xs font-medium">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="font-semibold text-primary">Cloudflare Edge</span>
-          <span className="text-outline hidden sm:inline">• D1 Database &amp; Gemini AI</span>
+        <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-lg bg-surface-container text-on-surface text-xs font-medium">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+          <span className="font-semibold text-primary truncate">Apoio Farmacêutico</span>
+          <span className="text-outline hidden sm:inline">• D1 &amp; Gemini AI</span>
         </div>
       </div>
 
-      <div className="flex items-center gap-3 lg:gap-5">
+      <div className="flex items-center gap-2 sm:gap-3 lg:gap-5">
         {/* Toggle Dark Mode */}
         <button
           onClick={toggleTheme}
-          className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors"
+          className="w-10 h-10 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface flex items-center justify-center transition-colors"
           title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
           aria-label="Alternar tema"
         >

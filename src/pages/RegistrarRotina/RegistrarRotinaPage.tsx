@@ -181,41 +181,43 @@ export const RegistrarRotinaPage: React.FC<RegistrarRotinaPageProps> = ({ onNavi
             <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
               Quantidade de Atendimentos Na Rotina <span className="text-error">*</span>
             </label>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
-                className="w-10 h-10 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface font-bold text-lg border border-outline-variant/40 transition-colors"
-                title="Diminuir 1"
-              >
-                -
-              </button>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                className="w-24 h-10 text-center font-bold text-lg rounded-lg bg-surface-container-lowest border border-outline-variant text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setQuantity((prev) => prev + 1)}
-                className="w-10 h-10 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface font-bold text-lg border border-outline-variant/40 transition-colors"
-                title="Aumentar 1"
-              >
-                +
-              </button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((prev) => Math.max(1, prev - 1))}
+                  className="w-10 h-10 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface font-bold text-lg border border-outline-variant/40 transition-colors"
+                  title="Diminuir 1"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                  className="w-20 sm:w-24 h-10 text-center font-bold text-lg rounded-lg bg-surface-container-lowest border border-outline-variant text-on-surface focus:outline-none focus:ring-2 focus:ring-secondary"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setQuantity((prev) => prev + 1)}
+                  className="w-10 h-10 rounded-lg bg-surface-container hover:bg-surface-container-high flex items-center justify-center text-on-surface font-bold text-lg border border-outline-variant/40 transition-colors"
+                  title="Aumentar 1"
+                >
+                  +
+                </button>
+              </div>
 
               {/* Botões rápidos +1, +5, +10, +20 */}
-              <div className="flex items-center gap-1.5 ml-2">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {[1, 5, 10, 20].map((num) => (
                   <button
                     key={num}
                     type="button"
                     onClick={() => handleIncrement(num)}
-                    className="px-2.5 py-2 rounded-lg bg-secondary/10 hover:bg-secondary/20 text-secondary font-bold text-xs transition-colors border border-secondary/20"
+                    className="px-3 py-2 rounded-lg bg-secondary/10 hover:bg-secondary/20 text-secondary font-bold text-xs transition-colors border border-secondary/20"
                   >
                     +{num}
                   </button>

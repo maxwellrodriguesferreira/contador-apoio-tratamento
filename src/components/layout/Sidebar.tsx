@@ -57,16 +57,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         <div className="flex flex-col h-full">
           {/* Logo do Stitch */}
-          <div className="h-16 flex items-center gap-3 px-5 bg-surface-container-lowest border-b border-outline-variant/20">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-sm">
-              <span className="material-symbols-outlined text-[22px]">health_and_safety</span>
+          <div className="h-16 flex items-center justify-between px-5 bg-surface-container-lowest border-b border-outline-variant/20">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-sm">
+                <span className="material-symbols-outlined text-[22px]">health_and_safety</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-base text-primary leading-tight tracking-tight">
+                  Apoio Tratamento
+                </span>
+                <span className="text-[11px] text-on-surface-variant font-medium">Gestão & Clínica</span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-base text-primary leading-tight tracking-tight">
-                Apoio Tratamento
-              </span>
-              <span className="text-[11px] text-on-surface-variant font-medium">Gestão & Clínica</span>
-            </div>
+
+            {/* Botão fechar no mobile */}
+            <button
+              onClick={onCloseMobile}
+              className="lg:hidden w-8 h-8 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container flex items-center justify-center transition-colors"
+              aria-label="Fechar menu"
+            >
+              <span className="material-symbols-outlined text-[20px]">close</span>
+            </button>
           </div>
 
           {/* Status Cloudflare D1 */}
