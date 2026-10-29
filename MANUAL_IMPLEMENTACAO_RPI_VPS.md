@@ -33,30 +33,30 @@
 
 ```mermaid
 flowchart TD
-    Dev[💻 Desenvolvedor] -->|git push origin main| GH[🐙 GitHub Actions Multi-Arch]
+    Dev["💻 Desenvolvedor"] -->|git push origin main| GH["🐙 GitHub Actions Multi-Arch"]
     
-    subgraph CI [Pipeline GitHub Actions]
-        QEMU[QEMU Emulator ARM64] --> Buildx[Docker Buildx]
-        Buildx --> AMD[Compilação linux/amd64]
-        Buildx --> ARM[Compilação linux/arm64]
+    subgraph CI ["Pipeline GitHub Actions"]
+        QEMU["QEMU Emulator ARM64"] --> Buildx["Docker Buildx"]
+        Buildx --> AMD["Compilação linux/amd64"]
+        Buildx --> ARM["Compilação linux/arm64"]
     end
 
     GH --> CI
-    CI -->|Push Multi-Arch Manifest| DH[(🐳 Docker Hub: maxwellrodriguesferreira/apoio-tratamento:latest)]
+    CI -->|Push Multi-Arch Manifest| DH[("🐳 Docker Hub: maxwellrodriguesferreira/apoio-tratamento:latest")]
 
-    subgraph RPi [🍓 Borda: Raspberry Pi 4/5 (ARM64) - Drogaria / Sem IP Fixo]
-        CFT[☁️ Cloudflare Tunnel Connector] -->|Túnel Seguro Outbound| Edge[Cloudflare Edge / Internet]
-        CFT --> NPM_RPi[🛡️ Nginx Proxy Manager:80/81]
-        NPM_RPi -->|rede-proxy| App_RPi[🚀 contador-apoio-app:3000]
-        Portainer_RPi[📦 Portainer CE:9443] -.->|Gerencia| App_RPi
-        WT_RPi[🔄 Watchtower] -->|Pull ARM64| DH
+    subgraph RPi ["🍓 Borda: Raspberry Pi 4 e 5 ARM64 - Drogaria / Sem IP Fixo"]
+        CFT["☁️ Cloudflare Tunnel Connector"] -->|Túnel Seguro Outbound| Edge["Cloudflare Edge / Internet"]
+        CFT --> NPM_RPi["🛡️ Nginx Proxy Manager:80/81"]
+        NPM_RPi -->|rede-proxy| App_RPi["🚀 contador-apoio-app:3000"]
+        Portainer_RPi["📦 Portainer CE:9443"] -.->|Gerencia| App_RPi
+        WT_RPi["🔄 Watchtower"] -->|Pull ARM64| DH
     end
 
-    subgraph VPS [☁️ Nuvem: VPS Debian/Ubuntu (x86_64) - IP Público Dedicado]
-        DNS[🌐 DNS Registro A: apoio.suadrogaria.com.br] -->|Portas 80 / 443| NPM_VPS[🛡️ Nginx Proxy Manager + Let's Encrypt SSL]
-        NPM_VPS -->|rede-proxy| App_VPS[🚀 contador-apoio-app:3000]
-        Portainer_VPS[📦 Portainer CE:9443] -.->|Gerencia| App_VPS
-        WT_VPS[🔄 Watchtower] -->|Pull AMD64| DH
+    subgraph VPS ["☁️ Nuvem: VPS Debian e Ubuntu x86_64 - IP Público Dedicado"]
+        DNS["🌐 DNS Registro A: apoio.suadrogaria.com.br"] -->|Portas 80 / 443| NPM_VPS["🛡️ Nginx Proxy Manager + Let's Encrypt SSL"]
+        NPM_VPS -->|rede-proxy| App_VPS["🚀 contador-apoio-app:3000"]
+        Portainer_VPS["📦 Portainer CE:9443"] -.->|Gerencia| App_VPS
+        WT_VPS["🔄 Watchtower"] -->|Pull AMD64| DH
     end
 
     DH -.->|linux/arm64| App_RPi
