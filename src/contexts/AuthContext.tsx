@@ -32,8 +32,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         (u) => u.id === current.id || u.email.toLowerCase() === current.email.toLowerCase()
       );
       if (updated) {
-        AuthService.setCurrentUser(updated);
-        setUser({ ...updated });
+        const mergedUser: UserProfile = {
+          ...updated,
+          token: current.token,
+        };
+        AuthService.setCurrentUser(mergedUser);
+        setUser(mergedUser);
         return;
       }
     }

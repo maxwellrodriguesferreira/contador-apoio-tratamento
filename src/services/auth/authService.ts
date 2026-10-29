@@ -31,7 +31,13 @@ export class AuthService {
   }
 
   static setCurrentUser(user: UserProfile): void {
-    localStorage.setItem(APP_CONFIG.storageKeys.authSession, JSON.stringify(user));
+    const current = this.getCurrentUser();
+    const tokenToPreserve = user.token || current?.token;
+    const userToSave: UserProfile = {
+      ...user,
+      token: tokenToPreserve,
+    };
+    localStorage.setItem(APP_CONFIG.storageKeys.authSession, JSON.stringify(userToSave));
   }
 
   static clearSession(): void {
