@@ -102,8 +102,9 @@ Para aprofundar em tópicos específicos de infraestrutura, arquitetura e segura
 * 🏛️ **[Arquitetura Detalhada](ARCHITECTURE.md)**: Diagrama de fluxo, schemas de banco de dados e ciclo de vida do contêiner.
 * 🚀 **[Deploy Contínuo e CI/CD](README_CICD_WATCHTOWER.md)**: Automação com GitHub Actions, Docker Hub e atualização contínua via Watchtower.
 * 🌐 **[Deploy em VPS & Nginx Proxy Manager](MANUAL_DEPLOY_VPS_NPM.md)**: Passo a passo completo de publicação em VPS, SSL e proxy reverso.
-* 🍓☁️ **[Manual de Implementação: Raspberry Pi & VPS](MANUAL_IMPLEMENTACAO_RPI_VPS.md)**: Guia completo passo a passo de deploy em Raspberry Pi (ARM64) e servidores VPS (x86_64).
-* ☸️ **[Manifestos Kubernetes (K8s)](k8s/README.md)**: Implantação em clusters Kubernetes (k3s, EKS, GKE).
+* 🍓☁️ **[Manual de Implementação Docker: Raspberry Pi & VPS](MANUAL_IMPLEMENTACAO_RPI_VPS.md)**: Guia completo de deploy com Docker Standalone, Portainer e Watchtower.
+* ☸️ **[Manual de Implementação Kubernetes / K3s (Raspberry Pi & VPS)](MANUAL_IMPLEMENTACAO_K8S_RPI_VPS.md)**: Guia prático passo a passo de deploy com K3s, armazenamento persistente local-path, Cloudflare Tunnel in-cluster e SSL Let's Encrypt.
+* ☸️ **[Manifestos Kubernetes (K8s)](k8s/README.md)**: Documentação técnica dos manifestos declarativos K3s/K8s.
 * 🔒 **[Relatórios de Segurança e Testes](reports/security/)**: Evidências de testes de segurança e relatório executivo.
 
 ---

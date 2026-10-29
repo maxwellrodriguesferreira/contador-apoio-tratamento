@@ -9,6 +9,8 @@
 > * **Roteamento Externo**:
 >   * 🍓 **Raspberry Pi**: Utiliza **Cloudflare Tunnel (Zero Trust)** para contornar CGNAT sem abrir portas no roteador da farmácia.
 >   * ☁️ **VPS**: **Não necessita de Cloudflare Tunnel**; utiliza IP público dedicado com apontamento direto via DNS (Registro A).
+> 
+> ☸️ **Procurando deploy com Kubernetes?** Acesse o [Manual de Implementação Kubernetes / K3s (Raspberry Pi & VPS)](MANUAL_IMPLEMENTACAO_K8S_RPI_VPS.md).
 
 ---
 
