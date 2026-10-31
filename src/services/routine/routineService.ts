@@ -245,10 +245,13 @@ export class RoutineService {
       routines = routines.filter((r) => !shouldAffect(r));
       LocalDatabase.saveRoutines(routines);
 
-      const syncPromises = toDelete.map((r) => CloudSyncService.deleteRoutine(r.id));
-      await Promise.all(syncPromises);
+      await CloudSyncService.clearRoutines({
+        hardDelete: true,
+        onlyDeleted: options.onlyDeleted,
+        targetIds: options.targetIds || toDelete.map((r) => r.id),
+      });
     } else {
-      const syncPromises: Promise<void>[] = [];
+      const updatedTargets: RoutineCare[] = [];
       routines = routines.map((r) => {
         if (shouldAffect(r) && !r.deletedAt) {
           affectedCount++;
@@ -259,13 +262,18 @@ export class RoutineService {
             updatedAt: now,
             version: r.version + 1,
           };
-          syncPromises.push(CloudSyncService.syncRoutine(updated));
+          updatedTargets.push(updated);
           return updated;
         }
         return r;
       });
       LocalDatabase.saveRoutines(routines);
-      await Promise.all(syncPromises);
+
+      await CloudSyncService.clearRoutines({
+        hardDelete: false,
+        onlyDeleted: options.onlyDeleted,
+        targetIds: options.targetIds || updatedTargets.map((r) => r.id),
+      });
     }
 
     if (affectedCount > 0) {

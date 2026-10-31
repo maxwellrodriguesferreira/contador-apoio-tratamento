@@ -199,19 +199,49 @@ export class CloudSyncService {
     }
   }
 
-  static async deleteSupport(id: string): Promise<void> {
+  static async deleteSupport(id: string, hard = false): Promise<void> {
     try {
-      await apiRequest<{ success: boolean }>(`/supports/${id}`, 'DELETE');
+      await apiRequest<{ success: boolean }>(`/supports/${id}${hard ? '?hard=true' : ''}`, 'DELETE');
     } catch (e) {
       console.warn('Erro ao excluir apoio no Cloudflare D1:', e);
     }
   }
 
-  static async deleteRoutine(id: string): Promise<void> {
+  static async deleteRoutine(id: string, hard = false): Promise<void> {
     try {
-      await apiRequest<{ success: boolean }>(`/routines/${id}`, 'DELETE');
+      await apiRequest<{ success: boolean }>(`/routines/${id}${hard ? '?hard=true' : ''}`, 'DELETE');
     } catch (e) {
       console.warn('Erro ao excluir atendimento de rotina no Cloudflare D1:', e);
+    }
+  }
+
+  static async clearSupports(options: {
+    hardDelete?: boolean;
+    onlyDeleted?: boolean;
+    targetIds?: string[];
+  }): Promise<void> {
+    try {
+      await apiRequest<{ success: boolean; affectedCount: number }>('/supports/clear', 'POST', options);
+    } catch (e) {
+      console.warn('Aviso ao executar limpeza de apoios na API D1, executando fallback individual:', e);
+      if (options.targetIds && options.targetIds.length > 0) {
+        await Promise.all(options.targetIds.map((id) => this.deleteSupport(id, options.hardDelete)));
+      }
+    }
+  }
+
+  static async clearRoutines(options: {
+    hardDelete?: boolean;
+    onlyDeleted?: boolean;
+    targetIds?: string[];
+  }): Promise<void> {
+    try {
+      await apiRequest<{ success: boolean; affectedCount: number }>('/routines/clear', 'POST', options);
+    } catch (e) {
+      console.warn('Aviso ao executar limpeza de rotinas na API D1, executando fallback individual:', e);
+      if (options.targetIds && options.targetIds.length > 0) {
+        await Promise.all(options.targetIds.map((id) => this.deleteRoutine(id, options.hardDelete)));
+      }
     }
   }
 

@@ -45,6 +45,8 @@ describe('Suíte de Testes: Limpeza de Lançamentos e Reflexo no Dashboard com M
     vi.spyOn(CloudSyncService, 'syncGoal').mockResolvedValue();
     vi.spyOn(CloudSyncService, 'deleteSupport').mockResolvedValue();
     vi.spyOn(CloudSyncService, 'deleteRoutine').mockResolvedValue();
+    vi.spyOn(CloudSyncService, 'clearSupports').mockResolvedValue();
+    vi.spyOn(CloudSyncService, 'clearRoutines').mockResolvedValue();
     vi.spyOn(CloudSyncService, 'deleteGoal').mockResolvedValue();
     vi.spyOn(CloudSyncService, 'notifyDataChanged').mockImplementation(() => {});
   });

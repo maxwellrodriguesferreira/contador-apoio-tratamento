@@ -243,20 +243,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           )}
         </form>
 
-        {/* Rodapé com Botão Sobre */}
+        {/* Rodapé Informativo */}
         <div className="mt-6 pt-4 border-t border-outline-variant/30 flex items-center justify-between text-xs text-on-surface-variant">
           <div className="flex flex-col">
             <span className="font-medium text-[11px] text-outline">v1.0 • Produção</span>
             <span className="text-[10px] text-on-surface-variant/80 font-medium">CRF-SP: 86426</span>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowAboutModal(true)}
-            className="inline-flex items-center gap-1.5 font-semibold text-primary hover:text-primary-hover hover:underline transition-colors py-1 px-2.5 rounded-lg hover:bg-primary/5"
-          >
-            <span className="material-symbols-outlined text-[16px]">info</span>
-            Sobre
-          </button>
         </div>
       </div>
 

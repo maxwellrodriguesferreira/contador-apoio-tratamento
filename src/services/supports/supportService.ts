@@ -290,10 +290,13 @@ export class SupportService {
       supports = supports.filter((s) => !shouldAffect(s));
       LocalDatabase.saveSupports(supports);
 
-      const syncPromises = toDelete.map((s) => CloudSyncService.deleteSupport(s.id));
-      await Promise.all(syncPromises);
+      await CloudSyncService.clearSupports({
+        hardDelete: true,
+        onlyDeleted: options.onlyDeleted,
+        targetIds: options.targetIds || toDelete.map((s) => s.id),
+      });
     } else {
-      const syncPromises: Promise<void>[] = [];
+      const updatedTargets: TreatmentSupport[] = [];
       supports = supports.map((s) => {
         if (shouldAffect(s) && !s.deletedAt) {
           affectedCount++;
@@ -305,13 +308,18 @@ export class SupportService {
             updatedAt: now,
             version: s.version + 1,
           };
-          syncPromises.push(CloudSyncService.syncSupport(updated));
+          updatedTargets.push(updated);
           return updated;
         }
         return s;
       });
       LocalDatabase.saveSupports(supports);
-      await Promise.all(syncPromises);
+
+      await CloudSyncService.clearSupports({
+        hardDelete: false,
+        onlyDeleted: options.onlyDeleted,
+        targetIds: options.targetIds || updatedTargets.map((s) => s.id),
+      });
     }
 
     if (affectedCount > 0) {

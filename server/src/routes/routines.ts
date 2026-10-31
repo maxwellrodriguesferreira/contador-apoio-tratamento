@@ -191,9 +191,69 @@ router.put('/:id', requireRole(['ADMIN']), async (req: Request, res: Response): 
   }
 });
 
-// Exclusão (Soft Delete): Restrita a ADMINISTRADORES
+// Limpeza em Massa (Clear Lancamentos de Rotina): Restrita a ADMINISTRADORES
+router.post('/clear', requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
+  const { hardDelete, onlyDeleted, targetIds } = req.body || {};
+  const isHard = Boolean(hardDelete);
+  const isTrashOnly = Boolean(onlyDeleted);
+  const author = req.user ? `${req.user.name} (${req.user.role})` : 'ADMIN';
+  const now = new Date().toISOString();
+
+  try {
+    let affectedCount = 0;
+
+    if (Array.isArray(targetIds) && targetIds.length > 0) {
+      const placeholders = targetIds.map(() => '?').join(',');
+      if (isHard) {
+        const resSql = await D1DatabaseClient.execute(
+          `DELETE FROM routine_cares WHERE id IN (${placeholders})`,
+          targetIds
+        );
+        affectedCount = resSql.changes;
+      } else {
+        const resSql = await D1DatabaseClient.execute(
+          `UPDATE routine_cares
+           SET deleted_at = ?, deleted_by = ?, version = version + 1, updated_at = ?
+           WHERE id IN (${placeholders}) AND deleted_at IS NULL`,
+          [now, author, now, ...targetIds]
+        );
+        affectedCount = resSql.changes;
+      }
+    } else if (isTrashOnly) {
+      if (isHard) {
+        const resSql = await D1DatabaseClient.execute(
+          'DELETE FROM routine_cares WHERE deleted_at IS NOT NULL'
+        );
+        affectedCount = resSql.changes;
+      } else {
+        affectedCount = 0;
+      }
+    } else {
+      if (isHard) {
+        const resSql = await D1DatabaseClient.execute('DELETE FROM routine_cares');
+        affectedCount = resSql.changes;
+      } else {
+        const resSql = await D1DatabaseClient.execute(
+          `UPDATE routine_cares
+           SET deleted_at = ?, deleted_by = ?, version = version + 1, updated_at = ?
+           WHERE deleted_at IS NULL`,
+          [now, author, now]
+        );
+        affectedCount = resSql.changes;
+      }
+    }
+
+    res.json({ success: true, affectedCount });
+  } catch (error) {
+    console.error('Erro ao limpar registros Na Rotina no Cloudflare D1:', error);
+    res.status(500).json({ error: 'Erro ao limpar atendimentos de rotina no banco de dados.' });
+  }
+});
+
+// Exclusão: Restrita a ADMINISTRADORES (Suporta soft delete e hard delete com ?hard=true)
 router.delete('/:id', requireRole(['ADMIN']), async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
+  const isHard = req.query.hard === 'true';
   const deletedBy = req.user ? `${req.user.name} (${req.user.role})` : 'ADMIN';
   const now = new Date().toISOString();
 
@@ -209,6 +269,16 @@ router.delete('/:id', requireRole(['ADMIN']), async (req: Request, res: Response
     }
 
     const current = rows[0];
+
+    if (isHard) {
+      await D1DatabaseClient.execute(
+        'DELETE FROM routine_cares WHERE id = ?',
+        [id]
+      );
+      res.json({ success: true, id, hardDeleted: true });
+      return;
+    }
+
     const nextVersion = current.version + 1;
 
     await D1DatabaseClient.execute(
