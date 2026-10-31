@@ -4,7 +4,7 @@ import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Modal } from '../../components/common/Modal';
 import { useToast } from '../../contexts/ToastContext';
-import { AuthChallengeError } from '../../services/auth/authService';
+import { AuthChallengeError, AuthService } from '../../services/auth/authService';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -22,8 +22,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [isNewPasswordRequired, setIsNewPasswordRequired] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Estados do Modal de Recuperação de Senha
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotStep, setForgotStep] = useState<'EMAIL' | 'CODE_AND_PASSWORD'>('EMAIL');
   const [forgotEmail, setForgotEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [resetNewPassword, setResetNewPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [isForgotLoading, setIsForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState('');
+
   const [showAboutModal, setShowAboutModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,15 +81,86 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowForgotPasswordModal(false);
-    showToast(
-      'Se o e-mail estiver cadastrado no Amazon Cognito, as instruções de recuperação foram enviadas.',
-      'info',
-      'Recuperação de Senha'
-    );
+  const handleOpenForgotPassword = () => {
+    if (email.trim() && !forgotEmail) {
+      setForgotEmail(email.trim());
+    }
+    setForgotStep('EMAIL');
+    setResetCode('');
+    setResetNewPassword('');
+    setResetConfirmPassword('');
+    setForgotError('');
+    setShowForgotPasswordModal(true);
   };
+
+  const handleRequestResetCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError('');
+
+    if (!forgotEmail.trim()) {
+      setForgotError('Por favor, informe seu e-mail cadastrado.');
+      return;
+    }
+
+    setIsForgotLoading(true);
+    try {
+      const res = await AuthService.requestPasswordReset(forgotEmail);
+      setForgotStep('CODE_AND_PASSWORD');
+      showToast(
+        res.message || 'Código gerado com sucesso! Insira o código de 6 dígitos para redefinir sua senha.',
+        'info',
+        'Código Enviado'
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Falha ao solicitar código de recuperação.';
+      setForgotError(msg);
+    } finally {
+      setIsForgotLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError('');
+
+    if (!resetCode.trim()) {
+      setForgotError('Informe o código de verificação recebido.');
+      return;
+    }
+
+    if (resetNewPassword.length < 8) {
+      setForgotError('A nova senha deve possuir pelo menos 8 caracteres.');
+      return;
+    }
+
+    if (resetNewPassword !== resetConfirmPassword) {
+      setForgotError('A confirmação de senha não confere com a nova senha digitada.');
+      return;
+    }
+
+    setIsForgotLoading(true);
+    try {
+      const res = await AuthService.resetPasswordWithCode(
+        forgotEmail,
+        resetCode,
+        resetNewPassword
+      );
+      showToast(
+        res.message || 'Senha redefinida com sucesso! Você já pode entrar.',
+        'success',
+        'Senha Atualizada'
+      );
+      setEmail(forgotEmail);
+      setPassword('');
+      setShowForgotPasswordModal(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Falha ao redefinir a senha.';
+      setForgotError(msg);
+    } finally {
+      setIsForgotLoading(false);
+    }
+  };
+
 
   const handleBackToLogin = () => {
     setIsNewPasswordRequired(false);
@@ -174,7 +254,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               <div className="flex justify-end mt-1">
                 <button
                   type="button"
-                  onClick={() => setShowForgotPasswordModal(true)}
+                  onClick={handleOpenForgotPassword}
                   className="text-xs font-semibold text-primary hover:underline"
                 >
                   Esqueci minha senha
@@ -262,41 +342,169 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         </p>
       </footer>
 
-      {/* Modal Esqueci Minha Senha */}
-      {showForgotPasswordModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-on-surface/40 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-modal max-w-sm w-full p-6 border border-outline-variant/40">
-            <h3 className="font-bold text-lg text-on-surface mb-2">Recuperar Senha</h3>
-            <p className="text-xs text-on-surface-variant mb-4">
-              Informe seu e-mail cadastrado no Amazon Cognito para receber o link de redefinição de acesso.
-            </p>
-            <form onSubmit={handleForgotPassword} className="flex flex-col gap-4">
+      {/* Modal Esqueci Minha Senha / Recuperar Acesso */}
+      <Modal
+        isOpen={showForgotPasswordModal}
+        onClose={() => {
+          if (!isForgotLoading) setShowForgotPasswordModal(false);
+        }}
+        title="Recuperação de Senha"
+        subtitle={
+          forgotStep === 'EMAIL'
+            ? 'Informe seu e-mail cadastrado para obter o código de segurança'
+            : `Confirmação de código e redefinição para ${forgotEmail}`
+        }
+        maxWidth="md"
+        footer={
+          forgotStep === 'EMAIL' ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => setShowForgotPasswordModal(false)}
+                disabled={isForgotLoading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                form="form-forgot-request"
+                variant="primary"
+                size="md"
+                isLoading={isForgotLoading}
+                loadingText="Gerando código..."
+                icon="arrow_forward"
+              >
+                Continuar
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => {
+                  setForgotStep('EMAIL');
+                  setForgotError('');
+                }}
+                disabled={isForgotLoading}
+                icon="arrow_back"
+              >
+                Voltar
+              </Button>
+              <Button
+                type="submit"
+                form="form-forgot-reset"
+                variant="primary"
+                size="md"
+                isLoading={isForgotLoading}
+                loadingText="Salvando nova senha..."
+                icon="lock_reset"
+              >
+                Redefinir Senha
+              </Button>
+            </>
+          )
+        }
+      >
+        <div className="space-y-4">
+          {/* Mensagem de Erro no Modal */}
+          {forgotError && (
+            <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-2.5 text-rose-700 text-xs font-medium animate-in fade-in">
+              <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">error</span>
+              <span>{forgotError}</span>
+            </div>
+          )}
+
+          {forgotStep === 'EMAIL' ? (
+            <form id="form-forgot-request" onSubmit={handleRequestResetCode} className="flex flex-col gap-4">
+              <div className="p-3.5 rounded-xl bg-surface-container-low/60 border border-outline-variant/30 flex items-start gap-3">
+                <span className="material-symbols-outlined text-[22px] text-primary shrink-0 mt-0.5">
+                  mark_email_read
+                </span>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  Informe o seu e-mail cadastrado no sistema. Um código de segurança com validade de 15 minutos será gerado para que você crie sua nova senha.
+                </p>
+              </div>
+
               <Input
-                label="E-mail"
+                label="E-mail Cadastrado"
                 type="email"
                 placeholder="seu.email@drogaria.com.br"
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
                 required
                 icon="mail"
+                autoComplete="email"
+                autoFocus
               />
-              <div className="flex items-center justify-end gap-2 mt-2">
-                <Button
+            </form>
+          ) : (
+            <form id="form-forgot-reset" onSubmit={handleResetPasswordSubmit} className="flex flex-col gap-4">
+              {/* Card com Instrução e Dica para Farmácia */}
+              <div className="p-3.5 rounded-xl bg-primary/10 border border-primary/20 flex flex-col gap-1.5">
+                <div className="flex items-center gap-2 text-xs font-bold text-primary">
+                  <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                  <span>Código gerado para: {forgotEmail}</span>
+                </div>
+                <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                  Insira o código de 6 dígitos enviado por e-mail ou gerado no console do sistema.
+                  Caso opere em terminal de loja ou sem envio automático de e-mail, solicite o código ao Farmacêutico Responsável ou insira o seu <strong>Código de Atendente</strong>.
+                </p>
+              </div>
+
+              <Input
+                label="Código de Verificação (PIN)"
+                placeholder="Ex: 123456 ou Código de Atendente"
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value)}
+                required
+                icon="key"
+                autoFocus
+              />
+
+              <Input
+                label="Nova Senha"
+                type="password"
+                placeholder="Mínimo de 8 caracteres"
+                value={resetNewPassword}
+                onChange={(e) => setResetNewPassword(e.target.value)}
+                required
+                icon="lock"
+                autoComplete="new-password"
+                showPasswordToggle
+              />
+
+              <Input
+                label="Confirmar Nova Senha"
+                type="password"
+                placeholder="Repita a nova senha"
+                value={resetConfirmPassword}
+                onChange={(e) => setResetConfirmPassword(e.target.value)}
+                required
+                icon="lock_reset"
+                autoComplete="new-password"
+                showPasswordToggle
+              />
+
+              <div className="flex items-center justify-between pt-1 text-xs">
+                <span className="text-outline">Não recebeu o código?</span>
+                <button
                   type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowForgotPasswordModal(false)}
+                  onClick={handleRequestResetCode}
+                  disabled={isForgotLoading}
+                  className="font-semibold text-primary hover:underline disabled:opacity-50"
                 >
-                  Cancelar
-                </Button>
-                <Button type="submit" variant="primary" size="sm">
-                  Enviar Instruções
-                </Button>
+                  Gerar novo código
+                </button>
               </div>
             </form>
-          </div>
+          )}
         </div>
-      )}
+      </Modal>
+
 
       {/* Modal Sobre a Aplicação */}
       <Modal

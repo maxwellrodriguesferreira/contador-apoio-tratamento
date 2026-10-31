@@ -18,7 +18,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <LoadingState message="Validando credenciais do Amazon Cognito..." />
+        <LoadingState message="Validando credenciais de acesso seguro..." />
       </div>
     );
   }

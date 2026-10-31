@@ -41,6 +41,21 @@ export class D1DatabaseClient {
 
     if (this.isCloudflareRemote) {
       console.info('📡 Conectado ao Cloudflare D1 Remoto (Cloudflare Edge SQL API)');
+      try {
+        await this.executeCloudflareRemote(`
+          CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            email TEXT NOT NULL,
+            token TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+          );
+        `, []);
+      } catch (cfErr) {
+        console.warn('Aviso ao verificar tabela password_reset_tokens no Cloudflare D1:', cfErr);
+      }
       this.isInitialized = true;
       return;
     }

@@ -169,6 +169,32 @@ export class LocalDatabase {
     this.set(APP_CONFIG.storageKeys.appSettings, settings);
   }
 
+  // Reset Tokens para fallback offline
+  static getResetTokens(): Array<{ email: string; code: string; expiresAt: string }> {
+    return this.get<Array<{ email: string; code: string; expiresAt: string }>>(
+      APP_CONFIG.storageKeys.authSession + '_reset_tokens',
+      []
+    );
+  }
+
+  static saveResetToken(email: string, code: string, expiresAt: string): void {
+    const tokens = this.getResetTokens().filter((t) => t.email.toLowerCase() !== email.toLowerCase());
+    tokens.push({ email: email.toLowerCase(), code, expiresAt });
+    this.set(APP_CONFIG.storageKeys.authSession + '_reset_tokens', tokens);
+  }
+
+  static verifyLocalResetToken(email: string, code: string): boolean {
+    const tokens = this.getResetTokens();
+    const token = tokens.find((t) => t.email.toLowerCase() === email.toLowerCase() && t.code === code);
+    if (!token) return false;
+    return new Date(token.expiresAt).getTime() > Date.now();
+  }
+
+  static clearResetToken(email: string): void {
+    const tokens = this.getResetTokens().filter((t) => t.email.toLowerCase() !== email.toLowerCase());
+    this.set(APP_CONFIG.storageKeys.authSession + '_reset_tokens', tokens);
+  }
+
   // Função para limpar todos os dados de armazenamento (Reset completo)
   static resetAllData(): void {
     if (typeof localStorage !== 'undefined') {
@@ -177,3 +203,4 @@ export class LocalDatabase {
     memoryStore.clear();
   }
 }
+

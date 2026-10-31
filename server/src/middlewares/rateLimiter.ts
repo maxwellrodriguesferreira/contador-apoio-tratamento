@@ -87,6 +87,36 @@ export const loginRateLimiter = rateLimit({
 });
 
 /**
+ * Middleware de Rate Limit específico para recuperação de senha (Forgot / Reset Password).
+ * - Proteção contra abuso e enumeração de e-mails.
+ */
+export const passwordResetRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // Máximo 5 solicitações a cada 15 minutos
+  standardHeaders: true,
+  legacyHeaders: false,
+  passOnStoreError: true,
+  validate: {
+    trustProxy: false,
+    xForwardedForHeader: false,
+    default: false,
+  },
+  keyGenerator: (req: Request) => {
+    const email = (req.body?.email || '').toString().trim().toLowerCase();
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown-ip';
+    return email ? `reset:${clientIp}:${email}` : `reset:${clientIp}`;
+  },
+  handler: (_req, res) => {
+    res.status(429).json({
+      error: 'Muitas solicitações de recuperação de senha. Por favor, aguarde 15 minutos antes de tentar novamente.',
+      code: 'RESET_RATE_LIMIT_EXCEEDED',
+      retryAfterMinutes: 15,
+    });
+  },
+});
+
+
+/**
  * Middleware de Rate Limit para chamadas de Inteligência Artificial (Google Gemini).
  * Previne esgotamento de quota e custos abusivos (Financial Denial of Service).
  */

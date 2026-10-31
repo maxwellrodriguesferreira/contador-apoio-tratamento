@@ -174,12 +174,21 @@ export const UsuariosPage: React.FC = () => {
 
     setIsResettingPassword(true);
     try {
-      const res = await AuthService.resetUserPassword(
-        currentUser,
-        resetUser.id,
-        resetMode === 'manual' ? { newPassword } : undefined
-      );
-      showToast(res.message, 'success', 'Senha Redefinida');
+      if (resetMode === 'email') {
+        const resetReq = await AuthService.requestPasswordReset(resetUser.email);
+        showToast(
+          resetReq.message || `Código de recuperação gerado para ${resetUser.name}.`,
+          'success',
+          'Recuperação Solicitada'
+        );
+      } else {
+        const res = await AuthService.resetUserPassword(
+          currentUser,
+          resetUser.id,
+          { newPassword }
+        );
+        showToast(res.message, 'success', 'Senha Redefinida');
+      }
       setResetUser(null);
       loadData();
     } catch (err: unknown) {
@@ -217,7 +226,7 @@ export const UsuariosPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-on-surface tracking-tight">Usuários do Sistema</h1>
           <p className="text-xs text-on-surface-variant mt-1">
-            Gestão de identidades via Amazon Cognito, controle de senhas, permissões RBAC e vínculos
+            Gestão de identidades, controle de senhas, permissões RBAC e vínculos
           </p>
         </div>
         <Button variant="primary" size="sm" onClick={handleOpenCreate} icon="person_add">
@@ -390,7 +399,7 @@ export const UsuariosPage: React.FC = () => {
         <Modal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title={editingUser ? 'Editar Usuário' : 'Novo Usuário do Sistema (Convite Cognito)'}
+          title={editingUser ? 'Editar Usuário' : 'Novo Usuário do Sistema'}
           subtitle="O usuário receberá as credenciais e definirá sua senha no primeiro acesso seguro."
           footer={
             <>
@@ -428,7 +437,7 @@ export const UsuariosPage: React.FC = () => {
               disabled={!!editingUser}
               required
               icon="mail"
-              helperText={editingUser ? 'O e-mail principal do Cognito não pode ser alterado.' : undefined}
+              helperText={editingUser ? 'O e-mail principal do usuário não pode ser alterado.' : undefined}
             />
 
             <Select
@@ -523,10 +532,10 @@ export const UsuariosPage: React.FC = () => {
               <div className="p-4 rounded-xl bg-surface-container-low/50 border border-outline-variant/30 flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-primary font-bold">
                   <span className="material-symbols-outlined text-[20px]">mark_email_read</span>
-                  <span>Envio de Link de Recuperação Cognito</span>
+                  <span>Gerar Código de Recuperação / Redefinição</span>
                 </div>
                 <p className="text-on-surface-variant leading-relaxed">
-                  Um e-mail será enviado para <strong className="text-on-surface font-semibold">{resetUser.email}</strong> com instruções seguras para redefinição de senha.
+                  Um código de segurança com validade de 15 minutos será gerado para <strong className="text-on-surface font-semibold">{resetUser.email}</strong> e enviado por e-mail (ou registrado no console da drogaria para atendimento presencial).
                 </p>
               </div>
             ) : (

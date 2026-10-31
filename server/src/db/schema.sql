@@ -118,6 +118,18 @@ CREATE TABLE IF NOT EXISTS routine_cares (
   FOREIGN KEY (attendant_id) REFERENCES attendants (id)
 );
 
+-- 10. Tokens e Códigos de Recuperação de Senha
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  email TEXT NOT NULL,
+  token TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  used INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES user_profiles (id)
+);
+
 -- Índices de Otimização para Consultas
 CREATE INDEX IF NOT EXISTS idx_treatment_supports_date ON treatment_supports (date);
 CREATE INDEX IF NOT EXISTS idx_treatment_supports_attendant ON treatment_supports (attendant_id);
@@ -127,4 +139,7 @@ CREATE INDEX IF NOT EXISTS idx_routine_cares_attendant ON routine_cares (attenda
 CREATE INDEX IF NOT EXISTS idx_routine_cares_deleted ON routine_cares (deleted_at);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs (created_at);
 CREATE INDEX IF NOT EXISTS idx_ai_analyses_hash ON ai_analyses (input_hash);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_email ON password_reset_tokens (email);
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens (token);
+
 

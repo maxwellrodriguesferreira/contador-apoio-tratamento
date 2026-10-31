@@ -74,8 +74,8 @@ export const PerfilPage: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-surface-container-low rounded-xl text-xs">
           <div>
-            <span className="text-outline block">Identificador Único Cognito (sub)</span>
-            <span className="font-mono font-semibold text-on-surface">{user.authUserId}</span>
+            <span className="text-outline block">Identificador Único (ID)</span>
+            <span className="font-mono font-semibold text-on-surface">{user.authUserId || user.id}</span>
           </div>
           <div>
             <span className="text-outline block">Status da Conta</span>
@@ -94,7 +94,7 @@ export const PerfilPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Cartão de Alteração de Senha (Amazon Cognito) */}
+      {/* Cartão de Alteração de Senha */}
       <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-subtle p-6 sm:p-8 flex flex-col gap-5">
         <div className="flex items-center gap-3 border-b border-outline-variant/20 pb-4">
           <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -103,7 +103,7 @@ export const PerfilPage: React.FC = () => {
           <div>
             <h3 className="font-bold text-base text-on-surface">Alterar Senha de Acesso</h3>
             <p className="text-xs text-on-surface-variant">
-              Atualize sua senha de forma segura no Amazon Cognito User Pool
+              Atualize sua senha de acesso de forma segura e criptografada
             </p>
           </div>
         </div>
@@ -146,7 +146,7 @@ export const PerfilPage: React.FC = () => {
               variant="primary"
               size="sm"
               isLoading={isChangingPassword}
-              loadingText="Atualizando no Cognito..."
+              loadingText="Atualizando senha..."
               icon="save"
             >
               Atualizar Senha
