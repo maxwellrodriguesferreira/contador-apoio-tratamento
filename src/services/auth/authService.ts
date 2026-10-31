@@ -423,13 +423,27 @@ export class AuthService {
   /**
    * Solicita código de recuperação de senha para um e-mail
    */
-  static async requestPasswordReset(email: string): Promise<{ success: boolean; message: string; email: string; requiresCode: boolean }> {
+  static async requestPasswordReset(email: string): Promise<{
+    success: boolean;
+    message: string;
+    email: string;
+    requiresCode: boolean;
+    emailSent?: boolean;
+    contingencyCode?: string;
+  }> {
     const cleanEmail = email.trim().toLowerCase();
 
     // 1. Tentar via API se não estiver em ambiente mock de testes unitários
     if (!(typeof process !== 'undefined' && process.env?.VITEST)) {
       try {
-        const response = await apiRequest<{ success: boolean; message: string; email: string; requiresCode?: boolean }>(
+        const response = await apiRequest<{
+          success: boolean;
+          message: string;
+          email: string;
+          requiresCode?: boolean;
+          emailSent?: boolean;
+          contingencyCode?: string;
+        }>(
           '/auth/forgot-password',
           'POST',
           { email: cleanEmail }
@@ -440,6 +454,8 @@ export class AuthService {
             message: response.message,
             email: response.email || cleanEmail,
             requiresCode: response.requiresCode ?? true,
+            emailSent: response.emailSent,
+            contingencyCode: response.contingencyCode,
           };
         }
       } catch (apiErr: unknown) {
@@ -452,14 +468,15 @@ export class AuthService {
     }
 
     // 2. Fallback local resiliente
+    let localCode: string | undefined = undefined;
     const users = LocalDatabase.getUserProfiles();
     const user = users.find((u) => u.email.toLowerCase() === cleanEmail);
 
     if (user && user.active) {
       // Gera código de 6 dígitos numéricos
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      localCode = Math.floor(100000 + Math.random() * 900000).toString();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-      LocalDatabase.saveResetToken(cleanEmail, code, expiresAt);
+      LocalDatabase.saveResetToken(cleanEmail, localCode, expiresAt);
 
       AuditService.logSystemAction(
         user.id,
@@ -471,7 +488,7 @@ export class AuthService {
         { email: cleanEmail, fallback: true }
       );
 
-      console.info(`🔑 [FALLBACK LOCAL] Código de recuperação para ${cleanEmail}: ${code}`);
+      console.info(`🔑 [FALLBACK LOCAL] Código de recuperação para ${cleanEmail}: ${localCode}`);
     }
 
     return {
@@ -479,6 +496,8 @@ export class AuthService {
       message: 'Código de recuperação gerado com sucesso. Insira o código de 6 dígitos para redefinir sua senha.',
       email: cleanEmail,
       requiresCode: true,
+      emailSent: false,
+      contingencyCode: localCode,
     };
   }
 

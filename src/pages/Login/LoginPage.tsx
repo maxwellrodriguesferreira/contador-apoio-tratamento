@@ -32,6 +32,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
   const [isForgotLoading, setIsForgotLoading] = useState(false);
   const [forgotError, setForgotError] = useState('');
+  const [emailSent, setEmailSent] = useState<boolean | null>(null);
+  const [contingencyCode, setContingencyCode] = useState<string | null>(null);
 
   const [showAboutModal, setShowAboutModal] = useState(false);
 
@@ -90,6 +92,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setResetNewPassword('');
     setResetConfirmPassword('');
     setForgotError('');
+    setEmailSent(null);
+    setContingencyCode(null);
     setShowForgotPasswordModal(true);
   };
 
@@ -105,11 +109,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setIsForgotLoading(true);
     try {
       const res = await AuthService.requestPasswordReset(forgotEmail);
+      setEmailSent(res.emailSent ?? null);
+      setContingencyCode(res.contingencyCode ?? null);
+      if (res.contingencyCode) {
+        setResetCode(res.contingencyCode);
+      }
       setForgotStep('CODE_AND_PASSWORD');
       showToast(
-        res.message || 'Código gerado com sucesso! Insira o código de 6 dígitos para redefinir sua senha.',
-        'info',
-        'Código Enviado'
+        res.message || 'Código gerado com sucesso!',
+        res.emailSent === false ? 'info' : 'success',
+        res.emailSent === false ? 'Aviso de Envio' : 'Código Enviado'
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Falha ao solicitar código de recuperação.';
@@ -444,16 +453,46 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           ) : (
             <form id="form-forgot-reset" onSubmit={handleResetPasswordSubmit} className="flex flex-col gap-4">
               {/* Card com Instrução e Dica para Farmácia */}
-              <div className="p-3.5 rounded-xl bg-primary/10 border border-primary/20 flex flex-col gap-1.5">
-                <div className="flex items-center gap-2 text-xs font-bold text-primary">
-                  <span className="material-symbols-outlined text-[18px]">verified_user</span>
-                  <span>Código gerado para: {forgotEmail}</span>
+              {emailSent === false || contingencyCode ? (
+                <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col gap-2 animate-in fade-in">
+                  <div className="flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-400">
+                    <span className="material-symbols-outlined text-[18px]">info</span>
+                    <span>Servidor de e-mail (SMTP) não configurado</span>
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                    Esta instalação opera sem servidor de envio de e-mails conectado no arquivo <code>.env</code>. Para você não ficar bloqueado, seu código de segurança é:
+                  </p>
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-surface-container-lowest border border-amber-500/25">
+                    <span className="font-mono font-bold text-lg tracking-widest text-primary">
+                      {contingencyCode || resetCode}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const codeToCopy = contingencyCode || resetCode;
+                        if (codeToCopy) {
+                          navigator.clipboard?.writeText(codeToCopy);
+                          showToast('Código copiado para a área de transferência!', 'info');
+                        }
+                      }}
+                      className="text-[11px] text-primary font-bold hover:underline flex items-center gap-1"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">content_copy</span>
+                      Copiar Código
+                    </button>
+                  </div>
                 </div>
-                <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                  Insira o código de 6 dígitos enviado por e-mail ou gerado no console do sistema.
-                  Caso opere em terminal de loja ou sem envio automático de e-mail, solicite o código ao Farmacêutico Responsável ou insira o seu <strong>Código de Atendente</strong>.
-                </p>
-              </div>
+              ) : (
+                <div className="p-3.5 rounded-xl bg-primary/10 border border-primary/20 flex flex-col gap-1.5 animate-in fade-in">
+                  <div className="flex items-center gap-2 text-xs font-bold text-primary">
+                    <span className="material-symbols-outlined text-[18px]">mark_email_read</span>
+                    <span>Código enviado para: {forgotEmail}</span>
+                  </div>
+                  <p className="text-[11px] text-on-surface-variant leading-relaxed">
+                    Verifique sua caixa de entrada e pasta de spam. Insira o código de 6 dígitos recebido por e-mail para cadastrar sua nova senha.
+                  </p>
+                </div>
+              )}
 
               <Input
                 label="Código de Verificação (PIN)"

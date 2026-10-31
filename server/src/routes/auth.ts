@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import crypto from 'node:crypto';
 import { D1DatabaseClient } from '../db/d1Client.js';
 import { loginRateLimiter, passwordResetRateLimiter } from '../middlewares/rateLimiter.js';
+import { EmailService } from '../services/emailService.js';
 import {
   authenticateToken,
   generateToken,
@@ -10,6 +11,7 @@ import {
 } from '../middlewares/auth.js';
 
 const router = Router();
+
 
 
 interface UserRow {
@@ -315,44 +317,33 @@ router.post('/forgot-password', passwordResetRateLimiter, async (req: Request, r
     console.log(`Validade: 15 minutos (até ${expiresAt})`);
     console.log('=======================================================\n');
 
-    // Se houver Resend API configurada no ambiente, envia o e-mail automaticamente
-    if (process.env.RESEND_API_KEY) {
-      try {
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: process.env.EMAIL_FROM || 'Apoio ao Tratamento <nao-responda@drogaria.com.br>',
-            to: cleanEmail,
-            subject: 'Código de Recuperação de Senha — Apoio ao Tratamento',
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 12px;">
-                <h2 style="color: #0f766e; text-align: center;">Recuperação de Acesso</h2>
-                <p>Olá, <strong>${user.name}</strong>!</p>
-                <p>Recebemos uma solicitação para redefinir sua senha de acesso ao sistema <strong>Apoio ao Tratamento</strong>.</p>
-                <div style="background-color: #f0fdfa; border: 2px dashed #0f766e; padding: 16px; text-align: center; border-radius: 8px; margin: 24px 0;">
-                  <span style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #0f766e;">${code}</span>
-                </div>
-                <p style="font-size: 13px; color: #666;">Este código expira em <strong>15 minutos</strong>. Caso você não tenha solicitado esta alteração, desconsidere esta mensagem com segurança.</p>
-              </div>
-            `,
-          }),
-        });
-        console.log(`📧 E-mail com código de recuperação enviado para ${cleanEmail} via Resend.`);
-      } catch (mailErr) {
-        console.warn('⚠️ Falha ao disparar e-mail via Resend:', mailErr);
-      }
-    }
+    // Disparo de e-mail via SMTP ou Resend se houver provedor configurado
+    const emailResult = await EmailService.sendPasswordResetEmail(cleanEmail, user.name, code);
 
-    res.json({
-      success: true,
-      message: 'Código de recuperação gerado com sucesso. Insira o código de 6 dígitos para criar sua nova senha.',
-      email: cleanEmail,
-      requiresCode: true,
-    });
+    if (emailResult.success) {
+      res.json({
+        success: true,
+        emailSent: true,
+        provider: emailResult.provider,
+        message: 'Código de recuperação enviado com sucesso para o seu e-mail. Verifique sua caixa de entrada e pasta de spam.',
+        email: cleanEmail,
+        requiresCode: true,
+      });
+    } else {
+      // Quando o e-mail não foi enviado (servidor sem SMTP configurado ou falha externa)
+      res.json({
+        success: true,
+        emailSent: false,
+        provider: emailResult.provider,
+        contingencyCode: code,
+        emailError: emailResult.error,
+        message: EmailService.isConfigured()
+          ? 'Houve uma oscilação no servidor de e-mail. Para sua comodidade, o código de recuperação está disponível abaixo.'
+          : 'Nenhum servidor de e-mail (SMTP) está configurado nesta instalação. Como contingência direta, utilize o código de segurança gerado abaixo.',
+        email: cleanEmail,
+        requiresCode: true,
+      });
+    }
   } catch (error) {
     console.error('Erro ao processar solicitação de recuperação de senha:', error);
     res.status(500).json({ error: 'Erro interno ao processar recuperação de senha.' });
