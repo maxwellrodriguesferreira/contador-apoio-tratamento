@@ -8,7 +8,7 @@
 [![TypeScript](https://img.shields.io/badge/typescript-5.8-blue.svg)](https://www.typescriptlang.org/)
 [![Database](https://img.shields.io/badge/database-Cloudflare_D1_%7C_SQLite-orange.svg)](https://developers.cloudflare.com/d1/)
 [![AI](https://img.shields.io/badge/AI-Google_Gemini_Flash-purple.svg)](https://ai.google.dev/)
-[![Tests](https://img.shields.io/badge/tests-Vitest_(47_passed)-success.svg)](vitest.config.ts)
+[![Tests](https://img.shields.io/badge/tests-Vitest_(57_passed)-success.svg)](vitest.config.ts)
 [![Kubernetes](https://img.shields.io/badge/k8s-K3s_%7C_Raspberry_Pi_%7C_VPS-326ce5.svg)](k8s/)
 
 ---
@@ -49,6 +49,8 @@ graph TD
 | 🤖 **Inteligência Artificial** | **Google Gemini Flash** | Diagnósticos operacionais automatizados, identificação de gargalos de adesão terapêutica e plano de ação sugerido para liderança. Conta com cache determinístico (`input_hash`) e invalidação atômica ao modificar registros. |
 | 🛡️ **Auditoria (Audit Trail)** | **Rastreabilidade Imutável** | Trilha detalhada de conformidade: registra data/hora, IP, identidade do usuário, ação e snapshots completos de estado anterior (`old_value`) e novo (`new_value`) para mutações (`CREATE`, `UPDATE`, `DELETE`, `RESTORE`). |
 | 👥 **Usuários & Equipe** | **Controle de Acesso RBAC** | Cadastro e gerenciamento de atendentes e administradores, bloqueio de credenciais inativas e redefinição de senhas com hashing criptográfico seguro. |
+| 🔑 **Recuperação de Senha & SMTP** | **Segurança & Mensageria Transacional** | Fluxo completo de recuperação de acesso com PIN numérico temporário (15 min), proteção anti-enumeração de usuários e envio automático via SMTP (Google Workspace/Gmail, Hostinger, Outlook, SES) ou API Resend, com código de contingência em tela. |
+| 📱 **Design Mobile-First** | **Navegação Inferior (Bottom Bar)** | Interface ergonômica para telas de celular: menu inferior flutuante (*Início*, *Apoio*, *Rotina*, *Lançamentos*, *Mais*) para operação ágil com uma mão, topo limpo sem poluição visual e gaveta lateral responsiva. |
 | ☁️ **Sincronização Híbrida** | **Dual Engine em Tempo Real** | Banco na nuvem **Cloudflare D1 (Edge SQL)** com persistência local e fallback automático para **SQLite** nativo, integrado a barramento de eventos em tempo real (`CloudSyncService`). |
 
 ---
@@ -76,11 +78,11 @@ O sistema adota o princípio de menor privilégio e separação estrita de funç
 ## 🛠️ Stack Tecnológica
 
 * **Frontend**: React 18, TypeScript 5.8, Vite, Tailwind CSS, Material Symbols, Recharts (gráficos reativos) e Zod.
-* **Backend Integrado**: Node.js 24 Alpine, TypeScript, Express 4.x com rotas REST autenticadas (`/api/*`), PBKDF2 com Salt aleatório para senhas e tokens JWT seguros.
+* **Backend Integrado**: Node.js 24 Alpine, TypeScript, Express 4.x com rotas REST autenticadas (`/api/*`), PBKDF2 com Salt aleatório para senhas, tokens JWT seguros, **Nodemailer 10.x** (serviço de mensageria SMTP transacional) e **Upstash Redis** (rate limiting distribuído com proteção contra força bruta).
 * **Bancos de Dados**: **Cloudflare D1** (Edge SQL distribuído) + **SQLite** nativo persistido (`node:sqlite`) com sincronização bidirecional resiliente.
 * **Inteligência Artificial**: **Google Gemini 3.6 Flash** integrado via API REST com prompts técnicos especializados em farmácia clínica e governança de metas.
 * **Infraestrutura**: Contêiner único (*Single Container*) leve, seguro (execução como usuário não-root `node`), orquestrado via Docker Compose ou Kubernetes / K3s.
-* **Qualidade de Software**: 100% coberto por suíte de testes automatizados com **Vitest** (47 testes unitários e de integração aprovados).
+* **Qualidade de Software**: 100% coberto por suíte de testes automatizados com **Vitest** (57 testes unitários, componentes, navegação e integração aprovados).
 
 ---
 
@@ -93,7 +95,7 @@ cd contador-apoio-tratamento
 cp .env.example .env
 ```
 
-> Configure as variáveis no `.env` (credenciais de Administrador, chave opcional do Google Gemini e chaves Cloudflare D1 caso utilize nuvem remota). Se omitir as chaves da Cloudflare, o sistema opera de forma autônoma com o banco SQLite local persistido em volume.
+> Configure as variáveis no `.env` (credenciais de Administrador, chave opcional do Google Gemini, chaves Cloudflare D1 caso utilize nuvem remota e parâmetros SMTP para recebimento real de e-mails). Se omitir as chaves da Cloudflare, o sistema opera de forma autônoma com o banco SQLite local persistido em volume.
 
 ### 2. Execução com Docker Compose
 ```bash
@@ -106,6 +108,15 @@ Acesse no navegador: **`http://localhost:3000`**
 ### 3. Validação de Saúde da API
 ```bash
 curl http://localhost:3000/api/health
+```
+
+### 4. Validação de Envio SMTP (E-mails)
+```bash
+# Valida as credenciais SMTP (.env) e envia um e-mail de teste para o próprio remetente
+npm run test:email
+
+# Ou teste para um endereço específico:
+npm run test:email destinatario@dominio.com
 ```
 
 ---
