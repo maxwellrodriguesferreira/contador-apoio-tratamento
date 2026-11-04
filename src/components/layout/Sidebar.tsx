@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface SidebarProps {
   currentPath: string;
@@ -15,6 +16,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
 }) => {
   const { user, isAdmin, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const adminNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -70,14 +72,28 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
             </div>
 
-            {/* Botão fechar no mobile */}
-            <button
-              onClick={onCloseMobile}
-              className="lg:hidden w-8 h-8 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container flex items-center justify-center transition-colors"
-              aria-label="Fechar menu"
-            >
-              <span className="material-symbols-outlined text-[20px]">close</span>
-            </button>
+            {/* Ações: Tema e Botão fechar no mobile */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={toggleTheme}
+                className="w-8 h-8 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container flex items-center justify-center transition-colors"
+                title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
+                aria-label="Alternar tema"
+              >
+                <span className="material-symbols-outlined text-[19px]">
+                  {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+                </span>
+              </button>
+
+              {/* Botão fechar no mobile */}
+              <button
+                onClick={onCloseMobile}
+                className="lg:hidden w-8 h-8 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container flex items-center justify-center transition-colors"
+                aria-label="Fechar menu"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
           </div>
 
           {/* Status Cloudflare D1 */}

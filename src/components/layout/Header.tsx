@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
 interface HeaderProps {
-  onToggleMobileMenu: () => void;
+  onToggleMobileMenu?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
@@ -11,21 +11,23 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="fixed top-0 left-0 lg:left-64 right-0 h-16 bg-surface-container-lowest/95 backdrop-blur-xl shadow-subtle z-30 flex items-center justify-between px-4 lg:px-8 border-b border-outline-variant/30">
+    <header className="hidden lg:flex fixed top-0 left-64 right-0 h-16 bg-surface-container-lowest/95 backdrop-blur-xl shadow-subtle z-30 items-center justify-between px-8 border-b border-outline-variant/30">
       <div className="flex items-center gap-3">
-        {/* Botão Mobile Hamburger */}
-        <button
-          onClick={onToggleMobileMenu}
-          className="w-10 h-10 rounded-lg text-on-surface-variant hover:bg-surface-container flex items-center justify-center lg:hidden transition-colors"
-          aria-label="Abrir menu lateral"
-        >
-          <span className="material-symbols-outlined text-[24px]">menu</span>
-        </button>
+        {/* Botão Mobile Hamburger (reserva se reexibido) */}
+        {onToggleMobileMenu && (
+          <button
+            onClick={onToggleMobileMenu}
+            className="w-10 h-10 rounded-lg text-on-surface-variant hover:bg-surface-container flex items-center justify-center lg:hidden transition-colors"
+            aria-label="Abrir menu lateral"
+          >
+            <span className="material-symbols-outlined text-[24px]">menu</span>
+          </button>
+        )}
 
-        <div className="flex items-center gap-2 px-2.5 sm:px-3 py-1 rounded-lg bg-surface-container text-on-surface text-xs font-medium">
+        <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-surface-container text-on-surface text-xs font-medium">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
           <span className="font-semibold text-primary truncate">Apoio Farmacêutico</span>
-          <span className="text-outline hidden sm:inline">• D1 &amp; Gemini AI</span>
+          <span className="text-outline">• D1 &amp; Gemini AI</span>
         </div>
       </div>
 

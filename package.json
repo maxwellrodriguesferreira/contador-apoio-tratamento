@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "docker:build": "docker compose build",
     "docker:up": "docker compose up -d",
-    "docker:down": "docker compose down"
+    "docker:down": "docker compose down",
+    "test:email": "npm --prefix server run test:email"
   },
   "dependencies": {
     "clsx": "^2.1.1",

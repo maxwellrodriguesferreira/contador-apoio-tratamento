@@ -27,7 +27,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         <Header onToggleMobileMenu={() => setIsOpenMobile(true)} />
-        <main className="flex-1 pt-18 sm:pt-20 px-3 sm:px-6 lg:px-8 pb-24 lg:pb-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 pt-4 sm:pt-6 lg:pt-20 px-3 sm:px-6 lg:px-8 pb-24 lg:pb-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
 
