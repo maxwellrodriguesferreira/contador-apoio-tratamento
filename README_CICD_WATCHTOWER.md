@@ -111,6 +111,13 @@ services:
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-}
       - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
     volumes:
       - d1_sqlite_data:/app/data
     networks:

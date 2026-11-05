@@ -8,7 +8,7 @@
 [![TypeScript](https://img.shields.io/badge/typescript-5.8-blue.svg)](https://www.typescriptlang.org/)
 [![Database](https://img.shields.io/badge/database-Cloudflare_D1_%7C_SQLite-orange.svg)](https://developers.cloudflare.com/d1/)
 [![AI](https://img.shields.io/badge/AI-Google_Gemini_Flash-purple.svg)](https://ai.google.dev/)
-[![Tests](https://img.shields.io/badge/tests-Vitest_(57_passed)-success.svg)](vitest.config.ts)
+[![Tests](https://img.shields.io/badge/tests-Vitest_(60_passed)-success.svg)](vitest.config.ts)
 [![Kubernetes](https://img.shields.io/badge/k8s-K3s_%7C_Raspberry_Pi_%7C_VPS-326ce5.svg)](k8s/)
 
 ---
@@ -49,8 +49,12 @@ graph TD
 | 🤖 **Inteligência Artificial** | **Google Gemini Flash** | Diagnósticos operacionais automatizados, identificação de gargalos de adesão terapêutica e plano de ação sugerido para liderança. Conta com cache determinístico (`input_hash`) e invalidação atômica ao modificar registros. |
 | 🛡️ **Auditoria (Audit Trail)** | **Rastreabilidade Imutável** | Trilha detalhada de conformidade: registra data/hora, IP, identidade do usuário, ação e snapshots completos de estado anterior (`old_value`) e novo (`new_value`) para mutações (`CREATE`, `UPDATE`, `DELETE`, `RESTORE`). |
 | 👥 **Usuários & Equipe** | **Controle de Acesso RBAC** | Cadastro e gerenciamento de atendentes e administradores, bloqueio de credenciais inativas e redefinição de senhas com hashing criptográfico seguro. |
+| 🧑‍⚕️ **Seletor de Atendentes** | **Busca Rápida & Ordenação por Código** | Componente avançado `AttendantSelector` com busca em tempo real por nome ou código, badges numéricos em ordem crescente (`Cód. 008`), avatar com iniciais e bottom-sheet nativo no mobile. |
+| 🔢 **Ordenação Numérica Universal** | **Crescente por Código de Atendente** | Ordenação natural garantida em todas as camadas da aplicação: consultas SQL do backend (`CAST(code AS INTEGER) ASC`), banco local e seletores da interface. |
 | 🔑 **Recuperação de Senha & SMTP** | **Segurança & Mensageria Transacional** | Fluxo completo de recuperação de acesso com PIN numérico temporário (15 min), proteção anti-enumeração de usuários e envio automático via SMTP (Google Workspace/Gmail, Hostinger, Outlook, SES) ou API Resend, com código de contingência em tela. |
-| 📱 **Design Mobile-First** | **Navegação Inferior (Bottom Bar)** | Interface ergonômica para telas de celular: menu inferior flutuante (*Início*, *Apoio*, *Rotina*, *Lançamentos*, *Mais*) para operação ágil com uma mão, topo limpo sem poluição visual e gaveta lateral responsiva. |
+| 📱 **Design Mobile-First** | **Apenas Barra Inferior no Celular** | Interface otimizada para smartphones: cabeçalho superior oculto em telas menores para máximo aproveitamento visual, barra inferior fixa (`BottomNav`) com área segura (`safe-area-inset`), cards dedicados (`md:hidden`) sem rolagem horizontal e revalidação imediata de cache (`no-cache`). |
+| 🐳 **Perfis Docker Especializados** | **Raspberry Pi, VPS & Watchtower** | Arquivos de orquestração dedicados: `docker-compose.rpi.yaml` (borda ARM64 com Cloudflare Tunnel), `docker-compose.vps.yaml` (nuvem x86_64 com rede-proxy) e `docker-compose.watchtower.yaml` (atualização contínua a cada 5 min). |
+| ☸️ **Kubernetes Declarativo** | **K3s com ConfigMap & Secrets SMTP** | Manifestos unificados com suporte nativo a TLS Let's Encrypt, Cloudflare Tunnel in-cluster e injeção automática de configurações SMTP e Redis. |
 | ☁️ **Sincronização Híbrida** | **Dual Engine em Tempo Real** | Banco na nuvem **Cloudflare D1 (Edge SQL)** com persistência local e fallback automático para **SQLite** nativo, integrado a barramento de eventos em tempo real (`CloudSyncService`). |
 
 ---
@@ -82,7 +86,7 @@ O sistema adota o princípio de menor privilégio e separação estrita de funç
 * **Bancos de Dados**: **Cloudflare D1** (Edge SQL distribuído) + **SQLite** nativo persistido (`node:sqlite`) com sincronização bidirecional resiliente.
 * **Inteligência Artificial**: **Google Gemini 3.6 Flash** integrado via API REST com prompts técnicos especializados em farmácia clínica e governança de metas.
 * **Infraestrutura**: Contêiner único (*Single Container*) leve, seguro (execução como usuário não-root `node`), orquestrado via Docker Compose ou Kubernetes / K3s.
-* **Qualidade de Software**: 100% coberto por suíte de testes automatizados com **Vitest** (57 testes unitários, componentes, navegação e integração aprovados).
+* **Qualidade de Software**: 100% coberto por suíte de testes automatizados com **Vitest** (60 testes unitários, componentes, navegação, ordenação numérica e integração aprovados em 13 suítes).
 
 ---
 
@@ -99,8 +103,14 @@ cp .env.example .env
 
 ### 2. Execução com Docker Compose
 ```bash
-# Inicia a aplicação em segundo plano com build automático
+# Opção 1: Início rápido com build local:
 docker compose up -d --build
+
+# Opção 2: Na Raspberry Pi 4 (ARM64 com Cloudflare Tunnel e CGNAT bypass):
+docker compose -f docker-compose.rpi.yaml up -d
+
+# Opção 3: Na VPS Cloud (x86_64 com rede-proxy e Nginx Proxy Manager):
+docker compose -f docker-compose.vps.yaml up -d
 ```
 
 Acesse no navegador: **`http://localhost:3000`**

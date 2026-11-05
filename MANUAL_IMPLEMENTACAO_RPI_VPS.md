@@ -487,6 +487,15 @@ REDIS_URL=
 LOGIN_RATE_LIMIT_MAX=5
 LOGIN_RATE_LIMIT_WINDOW_MS=900000
 
+# Envio de E-mails Transacionais (SMTP Google / Hostinger / Resend)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=notificacoes@suadrogaria.com.br
+SMTP_PASS=sua_senha_de_app_de_16_caracteres
+SMTP_FROM="Apoio ao Tratamento <notificacoes@suadrogaria.com.br>"
+SMTP_SECURE=false
+RESEND_API_KEY=
+
 # Persistência Local
 DATABASE_DIR=/app/data
 ```

@@ -38,14 +38,17 @@ flowchart TD
 O **Cloudflare D1** opera sob o motor relacional SQLite com conformidade ACID e replicação distribuída.
 
 ### 3.1. Estrutura de Tabelas:
-1. `user_profiles`: Perfis de usuário, papéis (`ADMIN` / `ATENDENTE`), status ativo e auditoria de login.
-2. `attendants`: Cadastro único de atendentes farmacêuticos (`code` único).
+1. `user_profiles`: Perfis de usuário, papéis (`ADMIN` / `ATENDENTE`), vínculo com atendente, status ativo e auditoria de login.
+2. `attendants`: Cadastro único de atendentes farmacêuticos (`code` único, com ordenação numérica por código natural `CAST(code AS INTEGER)`).
 3. `treatment_supports`: Registros de apoios ao tratamento, com suporte a **Soft Delete** (`deleted_at`, `deleted_by`) e **Concorrência Otimista** (`version`).
 4. `treatment_support_audits`: Trilha de auditoria rastreando antes (`old_value`) e depois (`new_value`) para mutações `CREATE`, `UPDATE`, `DELETE`, `RESTORE`.
-5. `goals`: Metas operacionais por loja e por atendente com versionamento temporal.
-6. `ai_analyses`: Cache de pareceres analíticos gerados pelo Google Gemini associados a um hash determinístico (`input_hash`).
-7. `audit_logs`: Logs de segurança do sistema (autenticação, falhas, redefinição de senhas, alterações de permissão).
-8. `system_settings`: Configurações operacionais e credenciais protegidas no backend.
+5. `routine_cares`: Registros de atendimentos Na Rotina (sem meta compulsória), com controle de concorrência e Soft Delete.
+6. `routine_care_audits`: Trilha de auditoria completa para lançamentos de Na Rotina.
+7. `goals`: Metas operacionais por loja e por atendente com versionamento temporal e zeramento dinâmico.
+8. `password_resets`: Tokens numéricos temporários (15 min) para recuperação de senha com proteção contra força bruta.
+9. `ai_analyses`: Cache de pareceres analíticos gerados pelo Google Gemini associados a um hash determinístico (`input_hash`).
+10. `audit_logs`: Logs de segurança do sistema (autenticação, falhas, redefinição de senhas, alterações de permissão).
+11. `system_settings`: Configurações operacionais e credenciais protegidas no backend.
 
 ---
 
@@ -55,6 +58,7 @@ O **Cloudflare D1** opera sob o motor relacional SQLite com conformidade ACID e 
 | :--- | :--- | :--- | :--- |
 | `/dashboard` | Leitura Completa | Leitura Restrita/Pessoal | 200 OK |
 | `/registrar-apoio` | Gravação Permitida | Acesso Proibido | 403 Forbidden |
+| `/registrar-rotina` | Gravação Permitida | Acesso Proibido | 403 Forbidden |
 | `/lancamentos` | CRUD + Soft Delete + Restore | Acesso Proibido | 403 Forbidden |
 | `/atendentes` | Cadastro e Ativação | Acesso Proibido | 403 Forbidden |
 | `/metas` | Versionamento e Ajuste | Acesso Proibido | 403 Forbidden |
@@ -81,3 +85,20 @@ O **Cloudflare D1** opera sob o motor relacional SQLite com conformidade ACID e 
 * **Execução Não-Root**: O contêiner opera com o usuário seguro nativo `node`, preservando permissões estritas no volume persistente `/app/data`.
 * **Healthcheck Integrado**: O healthcheck utiliza o `fetch` nativo do Node 24 para verificar periodicamente a disponibilidade do endpoint `/api/health` sem depender de pacotes externos como `curl`.
 * **Zero Overhead**: Elimina a necessidade de redes internas inter-contêineres, orquestração de dependências (`depends_on`), proxies duplicados e conflitos de portas na VPS.
+
+---
+
+## 7. Mensageria SMTP & E-mails Transacionais
+
+* **Envio Transacional**: Integração com servidores SMTP via **Nodemailer** (Google Workspace, Gmail com Senha de App, Hostinger, AWS SES) e suporte à API **Resend**.
+* **Validação de Conectividade**: Script dedicado `npm run test:email` para verificação de handshake TLS e envio de e-mail de teste.
+* **Segurança de Recuperação de Senha**: Códigos PIN temporários de 6 dígitos gerados via `crypto.randomInt`, com hash protegido no banco e expiração atômica de 15 minutos.
+
+---
+
+## 8. Arquitetura Mobile-First & Experiência em Dispositivos Móveis
+
+* **Barra Inferior Flutuante Exclusiva (`BottomNav`)**: Em celulares e telas menores (< 1024px), o menu superior é estritamente suprimido (`hidden lg:block`), maximizando o campo visual. A navegação ocorre por uma barra inferior touch-friendly com safe-area insets (`env(safe-area-inset-bottom)`).
+* **Seletor de Atendentes Moderno (`AttendantSelector`)**: Substitui o `<select>` nativo por um componente com busca em tempo real, badges com numeração crescente (`Cód. 008`), iniciais e modal bottom-sheet com suporte a toque.
+* **Cards Nativos para Gestão**: Tabelas complexas (Lançamentos, Atendentes, Usuários e Metas) convertem-se automaticamente em cards verticais (`md:hidden`), eliminando a necessidade de scroll horizontal em telas estreitas.
+* **Controle Defensivo de Cache**: Configuração de cabeçalhos `Cache-Control: no-cache, no-store, must-revalidate` para o `index.html` servido pelo Express, garantindo que navegadores móveis recarreguem os novos bundles Vite instantaneamente após cada deploy.
