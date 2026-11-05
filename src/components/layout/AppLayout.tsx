@@ -17,7 +17,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
   const [isOpenMobile, setIsOpenMobile] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background text-on-surface flex">
+    <div className="min-h-screen min-h-[100dvh] bg-background text-on-surface flex flex-col">
       <Sidebar
         currentPath={currentPath}
         onNavigate={onNavigate}
@@ -27,11 +27,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({
 
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         <Header onToggleMobileMenu={() => setIsOpenMobile(true)} />
-        <main className="flex-1 pt-4 sm:pt-6 lg:pt-20 px-3 sm:px-6 lg:px-8 pb-24 lg:pb-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 pt-[calc(1rem+env(safe-area-inset-top,0px))] sm:pt-6 lg:pt-20 px-3 sm:px-6 lg:px-8 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] lg:pb-8 max-w-7xl w-full mx-auto">
           {children}
         </main>
 
-        <footer className="mt-auto py-4 px-4 sm:px-6 lg:px-8 border-t border-outline-variant/20 bg-surface-container-lowest/60 backdrop-blur-sm mb-16 lg:mb-0">
+        <footer className="mt-auto py-4 px-4 sm:px-6 lg:px-8 border-t border-outline-variant/20 bg-surface-container-lowest/60 backdrop-blur-sm hidden lg:block">
           <div className="max-w-7xl w-full mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-on-surface-variant">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-primary">Apoio ao Tratamento</span>

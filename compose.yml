@@ -38,6 +38,10 @@ services:
       - PORT=3000
       - CLIENT_BUILD_PATH=/app/client
       - DATABASE_DIR=/app/data
+      # Rate Limiting e Cache Distribuído (Upstash Redis)
+      - REDIS_URL=${REDIS_URL:-}
+      - LOGIN_RATE_LIMIT_MAX=${LOGIN_RATE_LIMIT_MAX:-5}
+      - LOGIN_RATE_LIMIT_WINDOW_MS=${LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
       # Repasse e fallback de variáveis (preenchidas no .env ou no Portainer)
       - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
       - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-}

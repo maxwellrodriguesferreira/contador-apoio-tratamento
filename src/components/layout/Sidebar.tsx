@@ -53,7 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       <aside
-        className={`fixed left-0 top-0 h-full w-64 bg-surface-container-lowest shadow-subtle z-50 flex flex-col justify-between transition-transform duration-300 border-r border-outline-variant/30 ${
+        className={`fixed left-0 top-0 h-full h-[100dvh] max-h-[100dvh] w-72 max-w-[85vw] bg-surface-container-lowest shadow-subtle z-50 flex flex-col justify-between transition-transform duration-300 border-r border-outline-variant/30 pb-[env(safe-area-inset-bottom,0px)] ${
           isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >

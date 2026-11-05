@@ -42,7 +42,7 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-on-surface/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className={`w-full ${maxWidthStyles[maxWidth]} bg-surface-container-lowest rounded-2xl shadow-modal border border-outline-variant/40 flex flex-col overflow-hidden max-h-[92vh] animate-in zoom-in-95 duration-200`}
+        className={`w-full ${maxWidthStyles[maxWidth]} bg-surface-container-lowest rounded-2xl shadow-modal border border-outline-variant/40 flex flex-col overflow-hidden max-h-[90vh] max-h-[90dvh] animate-in zoom-in-95 duration-200`}
         role="dialog"
         aria-modal="true"
       >

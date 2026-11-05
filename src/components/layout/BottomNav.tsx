@@ -20,7 +20,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-xl border-t border-outline-variant/30 lg:hidden shadow-modal pb-[env(safe-area-inset-bottom)]"
+      className="fixed bottom-0 left-0 right-0 z-40 bg-surface-container-lowest/95 backdrop-blur-xl border-t border-outline-variant/30 lg:hidden shadow-modal pb-[env(safe-area-inset-bottom,0px)] select-none"
       aria-label="Navegação inferior móvel"
     >
       <div className="flex items-center justify-around h-16 px-1 max-w-md mx-auto">
