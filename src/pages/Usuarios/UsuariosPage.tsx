@@ -251,7 +251,122 @@ export const UsuariosPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Visualização em Cards para Dispositivos Móveis (md:hidden) */}
+        <div className="md:hidden divide-y divide-outline-variant/20">
+          {filteredUsers.length === 0 ? (
+            <div className="p-6 text-center text-on-surface-variant flex flex-col items-center justify-center">
+              <span className="material-symbols-outlined text-4xl text-outline mb-2">
+                person_off
+              </span>
+              <p className="font-semibold text-xs text-on-surface">Nenhum usuário encontrado</p>
+              <p className="text-[11px] text-outline mt-0.5">
+                {searchTerm
+                  ? 'Tente buscar por outro termo ou limpe o campo de busca.'
+                  : 'Clique em "Novo Usuário" para realizar o primeiro cadastro.'}
+              </p>
+            </div>
+          ) : (
+            filteredUsers.map((u) => {
+              const isCurrentLogged = currentUser?.id === u.id;
+              const linkedAttendant = attendants.find((a) => a.id === u.attendantId);
+
+              return (
+                <div key={`mob-${u.id}`} className="p-3.5 flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs shrink-0">
+                        {u.name ? u.name.charAt(0).toUpperCase() : 'U'}
+                      </div>
+                      <div className="flex flex-col min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-sm text-on-surface truncate">{u.name}</span>
+                          {isCurrentLogged && (
+                            <span className="px-1.5 py-0.2 rounded bg-primary-fixed text-primary text-[10px] font-bold shrink-0">
+                              Você
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[11px] text-on-surface-variant truncate">{u.email}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {u.role === 'ADMIN' ? (
+                        <Badge variant="primary" icon="shield_person">
+                          ADMIN
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" icon="person">
+                          ATENDENTE
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-outline bg-surface-container-low/40 p-2 rounded-lg">
+                    <span>Vínculo Atendente:</span>
+                    <span className="font-semibold text-on-surface">
+                      {linkedAttendant ? `${linkedAttendant.name} (${linkedAttendant.code})` : 'Nenhum'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-outline">
+                    <span>Status: {u.active ? 'Ativo' : 'Desativado'}</span>
+                    <span>Acesso: {u.lastLoginAt ? formatDateTimeBR(u.lastLoginAt) : 'Nunca'}</span>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1 pt-1 border-t border-outline-variant/15">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenEdit(u)}
+                      icon="edit"
+                      className="justify-center text-xs h-8 px-1.5"
+                      title="Editar dados"
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenResetPassword(u)}
+                      icon="lock_reset"
+                      className="justify-center text-xs h-8 px-1.5"
+                      title="Redefinir senha"
+                    >
+                      Senha
+                    </Button>
+                    <Button
+                      variant={u.active ? 'ghost' : 'outline'}
+                      size="sm"
+                      disabled={isCurrentLogged}
+                      onClick={() => handleToggleStatus(u)}
+                      icon={u.active ? 'toggle_on' : 'toggle_off'}
+                      className="justify-center text-xs h-8 px-1.5"
+                      title={u.active ? 'Desativar usuário' : 'Reativar usuário'}
+                    >
+                      {u.active ? 'Desativar' : 'Ativar'}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={isCurrentLogged}
+                      onClick={() => setDeletingUser(u)}
+                      icon="delete"
+                      className="justify-center text-xs h-8 px-1.5"
+                      title="Excluir usuário"
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Visualização em Tabela para Desktop (hidden md:block) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-low text-on-surface-variant uppercase font-bold text-[11px] border-b border-outline-variant/30">
               <tr>

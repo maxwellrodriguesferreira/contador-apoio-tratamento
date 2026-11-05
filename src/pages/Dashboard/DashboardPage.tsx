@@ -222,43 +222,46 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Seletor de Período */}
-          <div className="flex items-center bg-surface-container rounded-lg p-1 shadow-sm border border-outline-variant/30">
-            <button
-              onClick={() => setSelectedDate(getTodayISODate())}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
-                selectedDate === getTodayISODate()
-                  ? 'bg-surface-container-lowest text-primary shadow-sm'
-                  : 'text-on-surface-variant hover:text-on-surface'
-              }`}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full sm:w-auto">
+          {/* Seletor de Período e Botão de Atualizar Dados */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center bg-surface-container rounded-lg p-1 shadow-sm border border-outline-variant/30 flex-1 sm:flex-initial">
+              <button
+                onClick={() => setSelectedDate(getTodayISODate())}
+                className={`w-full sm:w-auto px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                  selectedDate === getTodayISODate()
+                    ? 'bg-surface-container-lowest text-primary shadow-sm'
+                    : 'text-on-surface-variant hover:text-on-surface'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">calendar_today</span>
+                <span>Hoje: {formatDateBR(getTodayISODate())}</span>
+              </button>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshData}
+              isLoading={isRefreshing}
+              loadingText="Atualizando..."
+              icon="sync"
+              className="hover:text-primary shrink-0"
+              title="Atualizar dados agora"
             >
-              <span className="material-symbols-outlined text-[16px]">calendar_today</span>
-              <span>Hoje: {formatDateBR(getTodayISODate())}</span>
-            </button>
+              <span className="hidden sm:inline">Atualizar Dados</span>
+            </Button>
           </div>
 
-          {/* Botão de Atualizar Dados */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefreshData}
-            isLoading={isRefreshing}
-            loadingText="Atualizando..."
-            icon="sync"
-            className="hover:text-primary"
-          >
-            Atualizar Dados
-          </Button>
-
-          {/* Ações Primárias para ADMIN */}
+          {/* Ações Primárias para ADMIN com layout em grid touch-friendly no mobile */}
           {isAdmin && (
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-2 gap-2 w-full sm:w-auto">
               <Button
                 variant="primary"
                 size="sm"
                 onClick={() => onNavigate('registrar-apoio')}
                 icon="health_and_safety"
+                className="justify-center shadow-xs"
               >
                 Novo Apoio
               </Button>
@@ -267,6 +270,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
                 size="sm"
                 onClick={() => onNavigate('registrar-rotina')}
                 icon="assignment_turned_in"
+                className="justify-center shadow-xs"
               >
                 Novo Na Rotina
               </Button>
@@ -276,10 +280,10 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
       </div>
 
       {/* Totalizador Geral de Serviços Farmacêuticos (Regra Consolidada) */}
-      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-subtle p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-outline-variant/20 gap-2">
+      <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant/30 shadow-subtle p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 sm:pb-4 mb-3 sm:mb-4 border-b border-outline-variant/20 gap-2">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
               <span className="material-symbols-outlined text-[20px]">hub</span>
             </div>
             <div>
@@ -289,12 +293,12 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({ onNavigate }) => {
               </p>
             </div>
           </div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container text-[11px] font-bold text-outline">
-            <span className="text-primary">APOIO AO TRATAMENTO</span>
+          <div className="inline-flex items-center justify-center flex-wrap gap-1 px-3 py-1 rounded-full bg-surface-container text-[10px] sm:text-[11px] font-bold text-outline max-w-full">
+            <span className="text-primary whitespace-nowrap">APOIO AO TRATAMENTO</span>
             <span>+</span>
-            <span className="text-secondary">NA ROTINA</span>
+            <span className="text-secondary whitespace-nowrap">NA ROTINA</span>
             <span>=</span>
-            <span className="text-emerald-700 dark:text-emerald-400 font-extrabold">TOTAL GERAL</span>
+            <span className="text-emerald-700 dark:text-emerald-400 font-extrabold whitespace-nowrap">TOTAL GERAL</span>
           </div>
         </div>
 

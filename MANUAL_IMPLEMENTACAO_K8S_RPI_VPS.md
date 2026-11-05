@@ -261,7 +261,7 @@ kubectl create secret generic contador-apoio-secret \
 ```bash
 cp k8s/base/secret.example.yaml k8s/base/secret.yaml
 nano k8s/base/secret.yaml
-# Insira suas chaves do Cloudflare D1, Gemini AI e Senhas
+# Insira suas chaves do Cloudflare D1, Gemini AI, SMTP (Google/Resend) e Senhas
 kubectl apply -f k8s/base/secret.yaml
 ```
 

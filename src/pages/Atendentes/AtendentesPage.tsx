@@ -180,7 +180,84 @@ export const AtendentesPage: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Visualização em Cards para Dispositivos Móveis (md:hidden) */}
+        <div className="md:hidden divide-y divide-outline-variant/20">
+          {filteredAttendants.length === 0 ? (
+            <div className="p-6 text-center text-on-surface-variant flex flex-col items-center justify-center">
+              <span className="material-symbols-outlined text-[28px] text-outline mb-1">
+                person_off
+              </span>
+              <p className="font-semibold text-xs text-on-surface">Nenhum atendente encontrado</p>
+              <p className="text-[11px] text-outline mt-0.5">
+                Clique em "Novo Atendente" para realizar o primeiro cadastro.
+              </p>
+            </div>
+          ) : (
+            filteredAttendants.map((a) => (
+              <div key={`mob-${a.id}`} className="p-3.5 flex flex-col gap-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="px-2 py-0.5 rounded font-mono font-bold text-xs bg-primary/10 text-primary border border-primary/20 shrink-0">
+                      Cód. {a.code}
+                    </span>
+                    <span className="font-bold text-sm text-on-surface truncate">
+                      {a.name}
+                    </span>
+                  </div>
+                  <div>
+                    {a.active ? (
+                      <Badge variant="success" icon="check">
+                        Ativo
+                      </Badge>
+                    ) : (
+                      <Badge variant="neutral" icon="block">
+                        Inativo
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-outline">
+                  <span>Cadastrado em:</span>
+                  <span>{formatDateTimeBR(a.createdAt)}</span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-outline-variant/15">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleOpenEdit(a)}
+                    icon="edit"
+                    className="justify-center text-xs h-8 px-2"
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    variant={a.active ? 'ghost' : 'outline'}
+                    size="sm"
+                    onClick={() => handleToggleStatus(a)}
+                    icon={a.active ? 'toggle_on' : 'toggle_off'}
+                    className="justify-center text-xs h-8 px-2"
+                  >
+                    {a.active ? 'Desativar' : 'Ativar'}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeletingAttendant(a)}
+                    icon="delete"
+                    className="justify-center text-xs h-8 px-2"
+                  >
+                    Excluir
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Visualização em Tabela para Desktop (hidden md:block) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-low text-on-surface-variant uppercase font-bold text-[11px] border-b border-outline-variant/30">
               <tr>

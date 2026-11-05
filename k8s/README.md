@@ -42,7 +42,7 @@ k8s/
 > ```
 
 ### 1. Criar a Secret com suas Credenciais:
-Antes de aplicar qualquer overlay, crie a Secret com suas chaves seguras (Cloudflare D1, Gemini AI e Senhas):
+Antes de aplicar qualquer overlay, crie a Secret com suas chaves seguras (Cloudflare D1, Gemini AI, SMTP/E-mail e Senhas):
 
 ```bash
 # Método A: A partir do arquivo .env existente na raiz do projeto

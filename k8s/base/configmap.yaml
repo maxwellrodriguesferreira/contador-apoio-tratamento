@@ -16,3 +16,8 @@ data:
   GEMINI_DEFAULT_MODEL: "gemini-3.6-flash"
   LOGIN_RATE_LIMIT_MAX: "5"
   LOGIN_RATE_LIMIT_WINDOW_MS: "900000"
+  # Configurações Operacionais de Envio de E-mails Transacionais (SMTP)
+  SMTP_HOST: "smtp.gmail.com"
+  SMTP_PORT: "587"
+  SMTP_FROM: "Apoio ao Tratamento <nao-responda@drogaria.com.br>"
+  SMTP_SECURE: "false"
