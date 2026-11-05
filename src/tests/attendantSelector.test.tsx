@@ -130,3 +130,4 @@ describe('Componente AttendantSelector - Seleção Aprimorada de Atendentes', ()
     container.remove();
   });
 });
+
