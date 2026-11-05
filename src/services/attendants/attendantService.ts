@@ -6,11 +6,13 @@ import { CloudSyncService } from '../api/cloudSyncService';
 
 export class AttendantService {
   static getAll(): Attendant[] {
-    return LocalDatabase.getAttendants();
+    return LocalDatabase.getAttendants().sort((a, b) =>
+      a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' })
+    );
   }
 
   static getActive(): Attendant[] {
-    return LocalDatabase.getAttendants().filter((a) => a.active);
+    return this.getAll().filter((a) => a.active);
   }
 
   static getById(id: string): Attendant | undefined {

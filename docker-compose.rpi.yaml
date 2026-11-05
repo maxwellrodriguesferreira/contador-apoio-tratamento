@@ -142,3 +142,4 @@ networks:
   rede-proxy:
     name: ${DOCKER_SHARED_NETWORK:-rede-proxy}
     external: true
+

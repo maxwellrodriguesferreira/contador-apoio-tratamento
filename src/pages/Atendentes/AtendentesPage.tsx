@@ -44,7 +44,11 @@ export const AtendentesPage: React.FC = () => {
   const handleOpenCreate = () => {
     setEditingAttendant(null);
     setName('');
-    const nextCode = String(attendants.length + 1).padStart(3, '0');
+    const maxNum = attendants.reduce((max, a) => {
+      const num = parseInt(a.code, 10);
+      return !isNaN(num) && num > max ? num : max;
+    }, 0);
+    const nextCode = String(maxNum + 1).padStart(3, '0');
     setCode(nextCode);
     setActive(true);
     setIsModalOpen(true);
@@ -120,11 +124,13 @@ export const AtendentesPage: React.FC = () => {
     }
   };
 
-  const filteredAttendants = attendants.filter(
-    (a) =>
-      a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredAttendants = attendants
+    .filter(
+      (a) =>
+        a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        a.code.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' }));
 
   if (!isAdmin) {
     return (
@@ -174,7 +180,12 @@ export const AtendentesPage: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-low text-on-surface-variant uppercase font-bold text-[11px] border-b border-outline-variant/30">
               <tr>
-                <th className="px-5 py-3">Código</th>
+                <th className="px-5 py-3">
+                  <div className="flex items-center gap-1 text-primary">
+                    <span>Código</span>
+                    <span className="material-symbols-outlined text-[14px]" title="Ordem crescente">arrow_upward</span>
+                  </div>
+                </th>
                 <th className="px-5 py-3">Nome Completo</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3">Cadastrado Em</th>

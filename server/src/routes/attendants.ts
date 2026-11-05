@@ -31,7 +31,7 @@ function mapAttendant(row: AttendantRow) {
 router.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
     const rows = await D1DatabaseClient.query<AttendantRow>(
-      'SELECT * FROM attendants ORDER BY name ASC'
+      'SELECT * FROM attendants ORDER BY CAST(code AS INTEGER) ASC, code ASC'
     );
     res.json(rows.map(mapAttendant));
   } catch (error) {
