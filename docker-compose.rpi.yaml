@@ -1,0 +1,144 @@
+# ==============================================================================
+# Docker Compose — Apoio ao Tratamento (Raspberry Pi 4 e 5 - ARM64)
+# Otimizado para hardware de borda, cartões MicroSD/SSD e Cloudflare Tunnel
+# Rede compartilhada com Portainer e Nginx Proxy Manager (rede-proxy)
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Aplicação Unificada (Frontend React SPA + Backend Express API + SQLite D1 Engine)
+  # ----------------------------------------------------------------------------
+  app:
+    image: maxwellrodriguesferreira/apoio-tratamento:latest
+    container_name: contador-apoio-app
+    restart: unless-stopped
+
+    # Exposição de Portas
+    # Expose: Comunicação interna direta com Nginx Proxy Manager / Cloudflare Tunnel
+    # Ports: Acesso direto na rede local da farmácia (ex: http://IP_RPI:3000)
+    ports:
+      - "${APP_PORT:-3000}:${PORT:-3000}"
+    expose:
+      - "${PORT:-3000}"
+
+    # Carregamento resiliente do arquivo de variáveis local (.env)
+    env_file:
+      - path: .env
+        required: false
+
+    environment:
+      # Configurações do Runtime Node.js
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3000}
+      - CLIENT_BUILD_PATH=/app/client
+      - DATABASE_DIR=/app/data
+
+      # Rate Limiting e Cache Distribuído (Upstash Redis)
+      - REDIS_URL=${REDIS_URL:-}
+      - LOGIN_RATE_LIMIT_MAX=${LOGIN_RATE_LIMIT_MAX:-5}
+      - LOGIN_RATE_LIMIT_WINDOW_MS=${LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
+
+      # Banco de Dados Nuvem Cloudflare D1 (Edge SQL)
+      # Deixe vazio se optar pela persistência 100% autônoma no SQLite local
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
+      - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
+
+      # Inteligência Artificial Google Gemini
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.6-flash}
+
+      # Credenciais de Acesso (Administrador e Atendente)
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-}
+      - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-}
+
+      # Envio de E-mails Transacionais (SMTP Google / Resend)
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+
+    # Volume Persistente para o Banco de Dados Local SQLite
+    volumes:
+      - d1_sqlite_data:/app/data
+
+    # Otimização de Recursos para Raspberry Pi (Proteção de RAM e Swap)
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+        reservations:
+          memory: 256M
+
+    # Rotação de Logs para proteção de vida útil do cartão MicroSD
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Verificação Contínua de Saúde da API
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:' + (process.env.PORT || 3000) + '/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # Rede compartilhada com NPM e Cloudflare Tunnel
+    networks:
+      - rede-proxy
+
+    # Label para identificação exclusiva pelo Watchtower
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ----------------------------------------------------------------------------
+  # 2. Watchtower: Agente de Atualização Contínua Automática
+  # ----------------------------------------------------------------------------
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: contador-apoio-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Compatibilidade com a API do Docker Engine no Raspberry Pi OS 64-bit
+      - DOCKER_API_VERSION=1.44
+      # Intervalo de checagem no Docker Hub em segundos (300s = 5 minutos)
+      - WATCHTOWER_POLL_INTERVAL=300
+      # Limpa imagens antigas para economizar espaço de armazenamento no cartão SD
+      - WATCHTOWER_CLEANUP=true
+      # Atualiza apenas contêineres com a label habilitada
+      - WATCHTOWER_LABEL_ENABLE=true
+      # Reinício gracioso sem interrupções bruscas
+      - WATCHTOWER_ROLLING_RESTART=true
+      - TZ=America/Sao_Paulo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    networks:
+      - rede-proxy
+
+# ==============================================================================
+# Volumes Persistentes Nomeados
+# ==============================================================================
+volumes:
+  d1_sqlite_data:
+    name: contador_apoio_d1_data
+
+# ==============================================================================
+# Redes Externas
+# ==============================================================================
+networks:
+  # Rede pré-existente criada no Docker da Raspberry Pi
+  rede-proxy:
+    name: ${DOCKER_SHARED_NETWORK:-rede-proxy}
+    external: true

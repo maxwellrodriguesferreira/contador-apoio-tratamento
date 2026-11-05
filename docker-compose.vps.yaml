@@ -1,0 +1,136 @@
+# ==============================================================================
+# Docker Compose — Apoio ao Tratamento (VPS Cloud - Debian / Ubuntu x86_64)
+# Otimizado para servidores em nuvem, IP público estático e Nginx Proxy Manager
+# Rede compartilhada com Portainer e Nginx Proxy Manager (rede-proxy)
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. Aplicação Unificada (Frontend React SPA + Backend Express API + SQLite D1 Engine)
+  # ----------------------------------------------------------------------------
+  app:
+    image: maxwellrodriguesferreira/apoio-tratamento:latest
+    container_name: contador-apoio-app
+    restart: unless-stopped
+
+    # Exposição de Portas
+    # Expose: Comunicação direta do NPM pelo hostname do container na rede 'rede-proxy'
+    # Ports: Permite acesso direto no host (ex: http://IP_VPS:3000)
+    ports:
+      - "${APP_PORT:-3000}:${PORT:-3000}"
+    expose:
+      - "${PORT:-3000}"
+
+    # Carregamento de variáveis de ambiente do arquivo .env
+    env_file:
+      - path: .env
+        required: false
+
+    environment:
+      # Configurações do Runtime Node.js
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3000}
+      - CLIENT_BUILD_PATH=/app/client
+      - DATABASE_DIR=/app/data
+
+      # Rate Limiting e Cache Distribuído (Upstash Redis)
+      - REDIS_URL=${REDIS_URL:-}
+      - LOGIN_RATE_LIMIT_MAX=${LOGIN_RATE_LIMIT_MAX:-5}
+      - LOGIN_RATE_LIMIT_WINDOW_MS=${LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
+
+      # Banco de Dados Nuvem Cloudflare D1 (Edge SQL)
+      # Deixe vazio se optar pela persistência 100% autônoma no SQLite local
+      - CLOUDFLARE_ACCOUNT_ID=${CLOUDFLARE_ACCOUNT_ID:-}
+      - CLOUDFLARE_DATABASE_ID=${CLOUDFLARE_DATABASE_ID:-}
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN:-}
+
+      # Inteligência Artificial Google Gemini
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GEMINI_DEFAULT_MODEL=${GEMINI_DEFAULT_MODEL:-gemini-3.6-flash}
+
+      # Credenciais de Acesso (Administrador e Atendente)
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - ATENDENTE_EMAIL=${ATENDENTE_EMAIL:-}
+      - ATENDENTE_PASSWORD=${ATENDENTE_PASSWORD:-}
+
+      # Envio de E-mails Transacionais (SMTP Google / Resend)
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+
+    # Volume Persistente para o Banco de Dados Local SQLite
+    volumes:
+      - d1_sqlite_data:/app/data
+
+    # Rotação de Logs para ambientes em nuvem
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+    # Verificação de Integridade e Saúde da API
+    healthcheck:
+      test: [ "CMD", "node", "-e", "fetch('http://localhost:' + (process.env.PORT || 3000) + '/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # Rede compartilhada externa com Nginx Proxy Manager
+    networks:
+      - rede-proxy
+
+    # Habilita atualização contínua pelo Watchtower
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+  # ----------------------------------------------------------------------------
+  # 2. Watchtower: Agente de Atualização Contínua Automática
+  # ----------------------------------------------------------------------------
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: contador-apoio-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      # Compatibilidade com a API Docker no Linux x86_64
+      - DOCKER_API_VERSION=1.44
+      # Intervalo de checagem no Docker Hub em segundos (300s = 5 minutos)
+      - WATCHTOWER_POLL_INTERVAL=300
+      # Remove as imagens Docker antigas após o download da nova
+      - WATCHTOWER_CLEANUP=true
+      # Atualiza apenas contêineres explicitamente autorizados via label
+      - WATCHTOWER_LABEL_ENABLE=true
+      # Atualização suave sem interromper outros contêineres do host
+      - WATCHTOWER_ROLLING_RESTART=true
+      - TZ=America/Sao_Paulo
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - rede-proxy
+
+# ==============================================================================
+# Volumes Persistentes Nomeados
+# ==============================================================================
+volumes:
+  d1_sqlite_data:
+    name: contador_apoio_d1_data
+
+# ==============================================================================
+# Redes Externas
+# ==============================================================================
+networks:
+  # Rede pré-existente onde o Nginx Proxy Manager está conectado
+  rede-proxy:
+    name: ${DOCKER_SHARED_NETWORK:-rede-proxy}
+    external: true
