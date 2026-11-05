@@ -79,13 +79,19 @@ export class LocalDatabase {
     this.set(APP_CONFIG.storageKeys.userProfiles, users);
   }
 
-  // Attendants (Zerado para produção)
+  // Attendants (Zerado para produção - sempre ordenado por código crescente)
   static getAttendants(): Attendant[] {
-    return this.get<Attendant[]>(APP_CONFIG.storageKeys.attendants, []);
+    const list = this.get<Attendant[]>(APP_CONFIG.storageKeys.attendants, []);
+    return list.sort((a, b) =>
+      String(a.code || '').localeCompare(String(b.code || ''), undefined, { numeric: true, sensitivity: 'base' })
+    );
   }
 
   static saveAttendants(attendants: Attendant[]): void {
-    this.set(APP_CONFIG.storageKeys.attendants, attendants);
+    const sorted = [...attendants].sort((a, b) =>
+      String(a.code || '').localeCompare(String(b.code || ''), undefined, { numeric: true, sensitivity: 'base' })
+    );
+    this.set(APP_CONFIG.storageKeys.attendants, sorted);
   }
 
   // Treatment Supports (Zerado para produção)

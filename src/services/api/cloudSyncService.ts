@@ -47,7 +47,10 @@ export class CloudSyncService {
       try {
         const cloudAttendants = await apiRequest<Attendant[]>('/attendants');
         if (Array.isArray(cloudAttendants)) {
-          LocalDatabase.saveAttendants(cloudAttendants);
+          const sorted = [...cloudAttendants].sort((a, b) =>
+            String(a.code || '').localeCompare(String(b.code || ''), undefined, { numeric: true, sensitivity: 'base' })
+          );
+          LocalDatabase.saveAttendants(sorted);
         }
       } catch (e) {
         console.warn('Aviso ao sincronizar atendentes do Cloudflare D1:', e);

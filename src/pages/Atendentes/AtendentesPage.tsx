@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { AttendantService } from '../../services/attendants/attendantService';
 import { Attendant } from '../../types';
@@ -124,13 +124,17 @@ export const AtendentesPage: React.FC = () => {
     }
   };
 
-  const filteredAttendants = attendants
-    .filter(
-      (a) =>
-        a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.code.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true, sensitivity: 'base' }));
+  const filteredAttendants = useMemo(() => {
+    return [...attendants]
+      .filter(
+        (a) =>
+          a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          a.code.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) =>
+        String(a.code || '').localeCompare(String(b.code || ''), undefined, { numeric: true, sensitivity: 'base' })
+      );
+  }, [attendants, searchTerm]);
 
   if (!isAdmin) {
     return (
