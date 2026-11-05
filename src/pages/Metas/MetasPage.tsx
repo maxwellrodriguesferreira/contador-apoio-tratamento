@@ -7,6 +7,7 @@ import { formatDateBR, formatDateTimeBR, getTodayISODate } from '../../utils/cal
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
+import { AttendantSelector } from '../../components/common/AttendantSelector';
 import { Modal } from '../../components/common/Modal';
 import { Badge } from '../../components/common/Badge';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
@@ -854,17 +855,11 @@ export const MetasPage: React.FC = () => {
             />
 
             {(goalType === 'DAILY_ATTENDANT' || goalType === 'MONTHLY_ATTENDANT') && (
-              <Select
+              <AttendantSelector
                 label="Atendente Específico"
                 value={selectedAttendantId}
-                onChange={(e) => setSelectedAttendantId(e.target.value)}
-                options={[
-                  { value: '', label: 'Selecione o atendente...' },
-                  ...attendants.map((a) => ({
-                    value: a.id,
-                    label: `${a.name} (Cód. ${a.code})`,
-                  })),
-                ]}
+                onChange={(newId) => setSelectedAttendantId(newId)}
+                attendants={attendants}
                 required
               />
             )}

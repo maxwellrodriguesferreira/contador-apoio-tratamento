@@ -9,6 +9,7 @@ import { exportLancamentosToExcel, exportLancamentosToCSV } from '../../utils/ex
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
+import { AttendantSelector } from '../../components/common/AttendantSelector';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Pagination } from '../../components/common/Pagination';
@@ -476,20 +477,17 @@ export const LancamentosPage: React.FC = () => {
               setCurrentPage(1);
             }}
           />
-          <Select
+          <AttendantSelector
             label="Atendente"
             value={selectedAttendantId}
-            onChange={(e) => {
-              setSelectedAttendantId(e.target.value);
+            onChange={(newId) => {
+              setSelectedAttendantId(newId);
               setCurrentPage(1);
             }}
-            options={[
-              { value: '', label: 'Todos os Atendentes' },
-              ...attendants.map((a) => ({
-                value: a.id,
-                label: `${a.name} (Cód. ${a.code})`,
-              })),
-            ]}
+            attendants={attendants}
+            allowClear
+            clearLabel="Todos os Atendentes"
+            placeholder="Todos os Atendentes"
           />
           <Select
             label="Status"
@@ -933,14 +931,11 @@ export const LancamentosPage: React.FC = () => {
               required
             />
 
-            <Select
+            <AttendantSelector
               label="Atendente"
               value={editAttendantId}
-              onChange={(e) => setEditAttendantId(e.target.value)}
-              options={attendants.map((a) => ({
-                value: a.id,
-                label: `${a.name} (Cód. ${a.code}) ${!a.active ? '[Inativo]' : ''}`,
-              }))}
+              onChange={(newId) => setEditAttendantId(newId)}
+              attendants={attendants}
               required
             />
 

@@ -7,6 +7,7 @@ import { formatDateTimeBR } from '../../utils/calculations';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
 import { Select } from '../../components/common/Select';
+import { AttendantSelector } from '../../components/common/AttendantSelector';
 import { Modal } from '../../components/common/Modal';
 import { ConfirmDialog } from '../../components/common/ConfirmDialog';
 import { Badge } from '../../components/common/Badge';
@@ -452,17 +453,14 @@ export const UsuariosPage: React.FC = () => {
             />
 
             {role === 'ATENDENTE' && (
-              <Select
+              <AttendantSelector
                 label="Vincular ao Cadastro de Atendente"
                 value={attendantId}
-                onChange={(e) => setAttendantId(e.target.value)}
-                options={[
-                  { value: '', label: 'Sem vínculo específico (Apenas atendente geral)' },
-                  ...attendants.map((a) => ({
-                    value: a.id,
-                    label: `${a.name} (Cód. ${a.code})`,
-                  })),
-                ]}
+                onChange={(newId) => setAttendantId(newId)}
+                attendants={attendants}
+                allowClear
+                clearLabel="Sem vínculo específico (Apenas atendente geral)"
+                placeholder="Sem vínculo específico"
                 helperText="Permite que o atendente visualize seus próprios indicadores caso a opção esteja habilitada."
               />
             )}

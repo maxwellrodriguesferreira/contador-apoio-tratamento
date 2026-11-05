@@ -6,7 +6,7 @@ import { Attendant } from '../../types';
 import { getTodayISODate } from '../../utils/calculations';
 import { Button } from '../../components/common/Button';
 import { Input } from '../../components/common/Input';
-import { Select } from '../../components/common/Select';
+import { AttendantSelector } from '../../components/common/AttendantSelector';
 import { useToast } from '../../contexts/ToastContext';
 import { CloudSyncService } from '../../services/api/cloudSyncService';
 
@@ -31,16 +31,22 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
     const list = AttendantService.getActive();
     setActiveAttendants(list);
     if (list.length > 0 && !attendantId) {
-      setAttendantId(list[0].id);
+      const defaultId = (user?.attendantId && list.some((a) => a.id === user.attendantId))
+        ? user.attendantId
+        : list[0].id;
+      setAttendantId(defaultId);
     }
     CloudSyncService.syncAllFromCloud().then(() => {
       const refreshed = AttendantService.getActive();
       setActiveAttendants(refreshed);
       if (refreshed.length > 0 && !attendantId) {
-        setAttendantId(refreshed[0].id);
+        const defaultId = (user?.attendantId && refreshed.some((a) => a.id === user.attendantId))
+          ? user.attendantId
+          : refreshed[0].id;
+        setAttendantId(defaultId);
       }
     });
-  }, []);
+  }, [user]);
 
   const handleIncrement = (amount: number) => {
     setQuantity((prev) => Math.max(1, prev + amount));
@@ -159,21 +165,13 @@ export const RegistrarApoioPage: React.FC<RegistrarApoioPageProps> = ({ onNaviga
             icon="calendar_today"
           />
 
-          {/* Seleção do Atendente */}
-          <Select
+          {/* Seleção do Atendente com Busca Rápida e Código Crescente */}
+          <AttendantSelector
             label="Atendente Farmacêutico"
             value={attendantId}
-            onChange={(e) => setAttendantId(e.target.value)}
+            onChange={(newId) => setAttendantId(newId)}
+            attendants={activeAttendants}
             required
-            icon="support_agent"
-            options={
-              activeAttendants.length > 0
-                ? activeAttendants.map((a) => ({
-                    value: a.id,
-                    label: `[Cód. ${a.code}] ${a.name}`,
-                  }))
-                : [{ value: '', label: 'Nenhum atendente ativo cadastrado' }]
-            }
           />
 
           {/* Campo de Quantidade com Botões Rápidos */}
