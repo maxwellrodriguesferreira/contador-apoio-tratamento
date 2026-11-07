@@ -558,161 +558,152 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           </Button>
         }
       >
-        <div className="space-y-6 text-on-surface">
-          {/* Introdução / Banner */}
-          <div className="p-4 rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-sm">
-              <span className="material-symbols-outlined text-[24px]">verified</span>
+        <div className="space-y-4 text-on-surface">
+          {/* Introdução Concisa */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-xs">
+              <span className="material-symbols-outlined text-[20px]">health_and_safety</span>
             </div>
             <div>
-              <h4 className="font-bold text-sm text-on-surface">
-                Plataforma de Fidelização e Cuidado Farmacêutico
+              <h4 className="font-bold text-xs sm:text-sm text-on-surface">
+                Cuidado Farmacêutico &amp; Gestão de Resultados
               </h4>
-              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-                Desenvolvido para drogarias e redes farmacêuticas registrarem, gerenciarem e
-                acompanharem a adesão de pacientes a tratamentos contínuos de saúde, potencializando
-                o engajamento da equipe e a fidelização de clientes.
+              <p className="text-[11px] sm:text-xs text-on-surface-variant mt-0.5 leading-relaxed">
+                Plataforma inteligente para registro ágil de atendimentos clínicos, acompanhamento de metas em tempo real e fortalecimento da adesão do paciente ao tratamento.
               </p>
             </div>
           </div>
 
-          {/* Grid de Funcionalidades */}
+          {/* Grid Resumido de Funcionalidades */}
           <div>
-            <h5 className="text-xs font-bold text-outline uppercase tracking-wider mb-3">
-              Resumo das Funcionalidades
+            <h5 className="text-[11px] font-bold text-outline uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[15px] text-primary">apps</span>
+              Funcionalidades Principais
             </h5>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {/* Funcionalidade 1 */}
-              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[20px]">add_task</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {/* 1. Apoio ao Tratamento */}
+              <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="material-symbols-outlined text-[17px]">health_and_safety</span>
                 </div>
-                <div>
-                  <h6 className="font-bold text-xs text-on-surface">Registro Ágil de Apoios</h6>
+                <div className="min-w-0">
+                  <h6 className="font-bold text-xs text-on-surface leading-tight">Apoio ao Tratamento</h6>
                   <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
-                    Lançamento de apoios ao tratamento por data, quantidade e atendente responsável com
-                    validação estrita e controle de versão.
+                    Registro ágil da adesão de pacientes a tratamentos contínuos de saúde.
                   </p>
                 </div>
               </div>
 
-              {/* Funcionalidade 2 */}
-              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[20px]">badge</span>
+              {/* 2. Atendimento Na Rotina */}
+              <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-secondary/15 text-secondary flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="material-symbols-outlined text-[17px]">assignment_turned_in</span>
                 </div>
-                <div>
-                  <h6 className="font-bold text-xs text-on-surface">Equipe de Atendentes</h6>
+                <div className="min-w-0">
+                  <h6 className="font-bold text-xs text-on-surface leading-tight">Atendimento Na Rotina</h6>
                   <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
-                    Cadastro com código de identificação único, controle de ativação/inativação e
-                    rastreabilidade individualizada de performance.
+                    Controle rápido de orientações e serviços de balcão sem meta obrigatória.
                   </p>
                 </div>
               </div>
 
-              {/* Funcionalidade 3 */}
-              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[20px]">ads_click</span>
+              {/* 3. Metas & Ritmo Operacional */}
+              <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="material-symbols-outlined text-[17px]">track_changes</span>
                 </div>
-                <div>
-                  <h6 className="font-bold text-xs text-on-surface">Metas Operacionais Inteligentes</h6>
+                <div className="min-w-0">
+                  <h6 className="font-bold text-xs text-on-surface leading-tight">Metas &amp; Desempenho</h6>
                   <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
-                    Configuração de metas diárias e mensais para a loja e por atendente, com cálculo
-                    automático de % de atingimento e projeções.
+                    Metas diárias e mensais para a loja e equipe, com projeções em tempo real.
                   </p>
                 </div>
               </div>
 
-              {/* Funcionalidade 4 */}
-              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[20px]">monitoring</span>
+              {/* 4. Painel Executivo */}
+              <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="material-symbols-outlined text-[17px]">monitoring</span>
                 </div>
-                <div>
-                  <h6 className="font-bold text-xs text-on-surface">Dashboard em Tempo Real</h6>
+                <div className="min-w-0">
+                  <h6 className="font-bold text-xs text-on-surface leading-tight">Painel em Tempo Real</h6>
                   <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
-                    Visão unificada dos indicadores do dia e do mês, comparativos com metas,
-                    distribuição por atendente e rankings.
+                    Totalizadores de atendimentos, evolução do ritmo e ranking da equipe.
                   </p>
                 </div>
               </div>
 
-              {/* Funcionalidade 5 */}
-              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[20px]">smart_toy</span>
+              {/* 5. Inteligência Artificial */}
+              <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="material-symbols-outlined text-[17px]">smart_toy</span>
                 </div>
-                <div>
-                  <h6 className="font-bold text-xs text-on-surface">Inteligência Artificial (Gemini)</h6>
+                <div className="min-w-0">
+                  <h6 className="font-bold text-xs text-on-surface leading-tight">Inteligência Artificial</h6>
                   <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
-                    Relatórios executivos e clínicos gerados automaticamente por IA, identificando
-                    padrões, gargalos e orientações para a equipe.
+                    Diagnósticos operacionais e pareceres clínicos via Google Gemini.
                   </p>
                 </div>
               </div>
 
-              {/* Funcionalidade 6 */}
-              <div className="p-3.5 rounded-xl bg-surface-container-low border border-outline-variant/30 flex gap-3 hover:border-primary/30 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0">
-                  <span className="material-symbols-outlined text-[20px]">history_edu</span>
+              {/* 6. Histórico & Auditoria */}
+              <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="material-symbols-outlined text-[17px]">security</span>
                 </div>
-                <div>
-                  <h6 className="font-bold text-xs text-on-surface">Auditoria & Rastreabilidade</h6>
+                <div className="min-w-0">
+                  <h6 className="font-bold text-xs text-on-surface leading-tight">Segurança &amp; Auditoria</h6>
                   <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
-                    Registro detalhado de todas as alterações (criação, edição, exclusão e restauração),
-                    com valores anteriores e identificação do autor.
+                    Histórico imutável de alterações, controle de concorrência e lixeira segura.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Perfis de Acesso & Segurança */}
-          <div className="p-4 rounded-xl bg-surface-container-low/70 border border-outline-variant/30">
-            <h5 className="text-xs font-bold text-on-surface flex items-center gap-2 mb-2.5">
-              <span className="material-symbols-outlined text-[18px] text-primary">security</span>
-              Níveis de Acesso & Segurança (RBAC)
+          {/* Perfis de Acesso Diretos */}
+          <div className="p-3 rounded-xl bg-surface-container-low/70 border border-outline-variant/30">
+            <h5 className="text-[11px] font-bold text-outline uppercase tracking-wider mb-2 flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[15px] text-primary">badge</span>
+              Perfis de Acesso
             </h5>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/30">
-                <div className="font-bold text-primary flex items-center gap-1.5 mb-1">
-                  <span className="material-symbols-outlined text-[16px]">admin_panel_settings</span>
-                  Administrador
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div className="p-2 rounded-lg bg-surface-container-lowest border border-outline-variant/20 flex items-start gap-2">
+                <span className="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">admin_panel_settings</span>
+                <div>
+                  <strong className="text-primary block text-xs">Administrador</strong>
+                  <span className="text-[11px] text-on-surface-variant leading-tight block">
+                    Gestão total da loja, metas, atendentes, relatórios, auditoria e IA.
+                  </span>
                 </div>
-                <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                  Acesso total: gestão de usuários, cadastro de atendentes, definição de metas, relatórios
-                  de auditoria, análises com IA e configurações do sistema.
-                </p>
               </div>
-              <div className="p-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant/30">
-                <div className="font-bold text-secondary flex items-center gap-1.5 mb-1">
-                  <span className="material-symbols-outlined text-[16px]">person</span>
-                  Atendente Farmacêutico
+              <div className="p-2 rounded-lg bg-surface-container-lowest border border-outline-variant/20 flex items-start gap-2">
+                <span className="material-symbols-outlined text-[16px] text-secondary shrink-0 mt-0.5">person</span>
+                <div>
+                  <strong className="text-secondary block text-xs">Atendente Farmacêutico</strong>
+                  <span className="text-[11px] text-on-surface-variant leading-tight block">
+                    Lançamento rápido de atendimentos e consulta ao seu desempenho diário.
+                  </span>
                 </div>
-                <p className="text-[11px] text-on-surface-variant leading-relaxed">
-                  Acesso operacional focado: consulta às suas metas diárias e mensais, acompanhamento
-                  do seu desempenho e registro rápido de apoios.
-                </p>
               </div>
             </div>
           </div>
 
           {/* Autoria e Responsabilidade Técnica */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-primary/10 via-surface-container-low to-surface-container-low border border-primary/25 flex items-start gap-3.5 shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-sm">
-              <span className="material-symbols-outlined text-[22px]">medical_services</span>
+          <div className="p-3 rounded-xl bg-gradient-to-r from-primary/10 via-surface-container-low to-surface-container-low border border-primary/25 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-xs">
+              <span className="material-symbols-outlined text-[18px]">medical_services</span>
             </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <h5 className="font-bold text-xs text-on-surface">Desenvolvimento &amp; Responsabilidade Técnica</h5>
-                <span className="text-[10px] bg-primary/15 text-primary font-bold px-2 py-0.5 rounded-full">
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="font-bold text-xs text-on-surface">Responsabilidade Técnica:</span>
+                <strong className="text-xs text-primary font-semibold">Maxwell Rodrigues Ferreira</strong>
+                <span className="text-[10px] bg-primary/15 text-primary font-bold px-1.5 py-0.2 rounded-full">
                   CRF-SP: 86426
                 </span>
               </div>
-              <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">
-                Aplicação desenvolvida pelo Desenvolvedor de Software e Farmacêutico:{' '}
-                <strong className="text-on-surface font-semibold">Maxwell Rodrigues Ferreira</strong>. Concebida com engenharia de software de ponta e profundo alinhamento à rotina clínica e operacional farmacêutica.
+              <p className="text-[11px] text-on-surface-variant mt-0.5 leading-tight">
+                Desenvolvedor de Software e Farmacêutico. Concebido para a prática clínica e rotina de drogaria.
               </p>
             </div>
           </div>
@@ -721,9 +712,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
           <div className="flex items-center justify-between text-[11px] text-outline pt-1 border-t border-outline-variant/20">
             <span className="flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Banco de Dados: Cloudflare D1 (SQLite Edge)
+              Cloudflare D1 (SQLite Edge)
             </span>
-            <span>Versão 1.0.0 • Sistema Seguro</span>
+            <span>Versão 1.0.0</span>
           </div>
         </div>
       </Modal>
