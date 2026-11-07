@@ -550,7 +550,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         isOpen={showAboutModal}
         onClose={() => setShowAboutModal(false)}
         title="Sobre o Apoio ao Tratamento"
-        subtitle="Sistema de Gestão Farmacêutica, Metas Clínicas e Inteligência Artificial"
+        subtitle="Registro de Apoios ao Tratamento para Pós-Venda e Gestão Clínica"
         maxWidth="2xl"
         footer={
           <Button variant="primary" size="md" onClick={() => setShowAboutModal(false)}>
@@ -559,17 +559,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
         }
       >
         <div className="space-y-4 text-on-surface">
-          {/* Introdução Concisa */}
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-xs">
+          {/* Introdução com Foco no Pós-Venda */}
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0 shadow-xs mt-0.5">
               <span className="material-symbols-outlined text-[20px]">health_and_safety</span>
             </div>
             <div>
               <h4 className="font-bold text-xs sm:text-sm text-on-surface">
-                Cuidado Farmacêutico &amp; Gestão de Resultados
+                Registro de Apoios ao Tratamento &amp; Pós-Venda Farmacêutico
               </h4>
-              <p className="text-[11px] sm:text-xs text-on-surface-variant mt-0.5 leading-relaxed">
-                Plataforma inteligente para registro ágil de atendimentos clínicos, acompanhamento de metas em tempo real e fortalecimento da adesão do paciente ao tratamento.
+              <p className="text-[11px] sm:text-xs text-on-surface-variant mt-1 leading-relaxed">
+                A <strong className="text-on-surface font-semibold">principal funcionalidade do sistema</strong> é registrar e contabilizar a quantidade de <strong className="text-primary font-semibold">Apoios ao Tratamento</strong> realizados pela equipe no balcão. Esses registros são essenciais para alimentar o fluxo de <strong className="text-on-surface font-semibold">pós-venda</strong> da farmácia, viabilizando o acompanhamento contínuo dos pacientes, o reforço à adesão terapêutica e a fidelização de clientes.
               </p>
             </div>
           </div>
@@ -582,14 +582,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
             </h5>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {/* 1. Apoio ao Tratamento */}
-              <div className="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/30 flex items-start gap-2.5">
-                <div className="w-7 h-7 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+              <div className="p-2.5 rounded-lg bg-surface-container-low border border-primary/30 bg-primary/5 flex items-start gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-primary text-on-primary flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
                   <span className="material-symbols-outlined text-[17px]">health_and_safety</span>
                 </div>
                 <div className="min-w-0">
-                  <h6 className="font-bold text-xs text-on-surface leading-tight">Apoio ao Tratamento</h6>
+                  <div className="flex items-center gap-1.5">
+                    <h6 className="font-bold text-xs text-on-surface leading-tight">Apoio ao Tratamento</h6>
+                    <span className="text-[9px] uppercase px-1.5 py-0.2 rounded font-bold bg-primary/20 text-primary">Foco Principal</span>
+                  </div>
                   <p className="text-[11px] text-on-surface-variant mt-0.5 leading-snug">
-                    Registro ágil da adesão de pacientes a tratamentos contínuos de saúde.
+                    Contabilização da volumetria de apoios para abastecer o contato de pós-venda e assegurar a adesão do paciente.
                   </p>
                 </div>
               </div>
